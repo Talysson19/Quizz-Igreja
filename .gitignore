@@ -1,0 +1,19 @@
+# Dependências (O que é pesado e baixado via comando)
+quiz-front/node_modules/
+quizizz-igreja/vendor/
+
+# Ambiente e Segredos (O que é perigoso vazar)
+quiz-front/.env
+quizizz-igreja/.env
+quizizz-igreja/storage/*.key
+
+# IDEs e Sistema
+.vscode/
+.idea/
+.DS_Store
+
+# Logs e Cache do Laravel
+quizizz-igreja/storage/logs/
+quizizz-igreja/storage/framework/sessions/
+quizizz-igreja/storage/framework/views/
+quizizz-igreja/storage/framework/cache/
