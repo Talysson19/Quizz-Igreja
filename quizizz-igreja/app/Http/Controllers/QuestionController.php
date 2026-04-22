@@ -103,97 +103,163 @@ public function index(Request $request)
 
     // 4. Busca Perguntas com Trava de Nível (Cenário 8)
     public function getQuestionsByLevel(Request $request, $level)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        // Regra: Nível 2 exige 50 pontos
-        if ($level == 2 && $user->points < 50) {
-            return response()->json([
-                'error' => 'Nível Bloqueado!',
-                'message' => 'Você precisa de 50 pontos para o Nível 2. Você tem: ' . $user->points
-            ], 403);
-        }
-
-        $questions = Question::where('church_id', $user->church_id)
-            ->where('level', $level)
-            ->get();
-
-        if ($questions->isEmpty()) {
-            return response()->json(['message' => 'Nenhum conteúdo neste nível.'], 404);
-        }
-
-        return response()->json($questions);
+    // Trava de Nível (Pode ser dinâmica no futuro, por enquanto mantive a sua)
+    if ($level == 2 && $user->points < 50) {
+        return response()->json(['error' => 'Nível Bloqueado!', 'message' => 'Alcance 50 pontos.'], 403);
     }
+
+    $questions = Question::where('church_id', $user->church_id)
+        ->where('level', $level)
+        ->get()
+        ->map(function($q) use ($user) {
+            // Adicionamos um campo virtual para o React saber se libera o botão "Pular"
+            $q->already_answered = DB::table('user_answers')
+                ->where('user_id', $user->id)
+                ->where('question_id', $q->id)
+                ->exists();
+            return $q;
+        });
+
+    return response()->json($questions);
+}
 
     // 5. Progresso do Usuário
-    public function getProgress(Request $request)
-    {
-        $user = $request->user();
-        $progress = DB::table('user_answers')
+  public function getProgress(Request $request)
+{
+    $user = $request->user();
+
+    // 1. Buscamos todos os níveis que POSSUEM perguntas cadastradas nesta igreja
+    $allLevels = Question::where('church_id', $user->church_id)
+        ->select('level')
+        ->distinct()
+        ->orderBy('level', 'asc')
+        ->get();
+
+    // 2. Para cada nível existente, contamos quantas o usuário já respondeu
+    $levelsProgress = $allLevels->map(function($lvl) use ($user) {
+        $completed = DB::table('user_answers')
             ->join('questions', 'user_answers.question_id', '=', 'questions.id')
             ->where('user_answers.user_id', $user->id)
-            ->select('questions.level', DB::raw('count(*) as completed_questions'))
-            ->groupBy('questions.level')
-            ->get();
+            ->where('questions.level', $lvl->level)
+            ->count();
 
-        return response()->json([
-            'user_name' => $user->name,
-            'total_points' => $user->points,
-            'levels_progress' => $progress
-        ]);
-    }
+        return [
+            'level' => $lvl->level,
+            'completed_questions' => $completed
+        ];
+    });
+
+    // 3. Totais gerais para o Certificado
+    $totalQuestions = Question::where('church_id', $user->church_id)->count();
+
+    $answeredQuestions = DB::table('user_answers')
+        ->where('user_id', $user->id)
+        ->count();
+
+    return response()->json([
+        'user_name' => $user->name,
+        'total_points' => $user->points,
+        'total_questions_church' => $totalQuestions,
+        'total_answered_user' => $answeredQuestions,
+        'levels_progress' => $levelsProgress // Agora contém todos os níveis!
+    ]);
+}
 
     // 6. Geração de Certificado (Cenário 10)
     public function generateCertificate(Request $request)
-    {
-        $user = $request->user();
-        $completedCount = DB::table('user_answers')->where('user_id', $user->id)->count();
+{
+    $user = $request->user();
 
-        if ($completedCount < 20) {
-            return response()->json([
-                'error' => 'Conclua 20 perguntas para liberar o certificado!',
-                'progress' => $completedCount . '/20'
-            ], 403);
-        }
+    // 1. Quantas perguntas existem no total para a igreja dele?
+    $totalQuestionsInChurch = Question::where('church_id', $user->church_id)->count();
 
-        $church = Church::find($user->church_id);
-        $data = [
-            'name' => $user->name,
-            'date' => now()->format('d/m/Y'),
-            'points' => $user->points,
-            'church' => $church ? $church->name : 'Paróquia'
-        ];
+    // 2. Quantas ele já respondeu?
+    $completedCount = DB::table('user_answers')
+        ->where('user_id', $user->id)
+        ->count();
 
-        $pdf = Pdf::loadView('emails.certificate', $data)->setPaper('a4', 'landscape');
-        return $pdf->download('Certificado_' . $user->id . '.pdf');
+    // 3. Validação: Só libera se ele respondeu TUDO e se existe pelo menos uma pergunta
+    if ($totalQuestionsInChurch === 0 || $completedCount < $totalQuestionsInChurch) {
+        return response()->json([
+            'error' => 'Você precisa concluir todas as perguntas disponíveis!',
+            'progress' => $completedCount . '/' . $totalQuestionsInChurch
+        ], 403);
     }
+
+    $church = Church::find($user->church_id);
+    $data = [
+        'name' => $user->name,
+        'date' => now()->format('d/m/Y'),
+        'points' => $user->points,
+        'church' => $church ? $church->name : 'Paróquia'
+    ];
+
+    $pdf = Pdf::loadView('emails.certificate', $data)->setPaper('a4', 'landscape');
+    return $pdf->download('Certificado_' . $user->id . '.pdf');
+}
 
     // 7. Cadastro de Pergunta pelo ADM (Setup Inicial)
     public function store(Request $request)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        if ($user->role !== 'admin') {
-            return response()->json(['error' => 'Acesso negado.'], 403);
-        }
+    // Contagem de perguntas no nível para esta igreja
+    $count = Question::where('church_id', $user->church_id)
+                     ->where('level', $request->level)
+                     ->count();
 
-        $data = $request->validate([
-            'level' => 'required|integer',
-            'title' => 'required|string',
-            'option_a' => 'required|string',
-            'option_b' => 'required|string',
-            'option_c' => 'required|string',
-            'option_d' => 'required|string',
-            'correct_option' => 'required|string|max:1',
-            'hint' => 'nullable|string',
-            'explanation' => 'required|string',
-        ]);
-
-        $data['church_id'] = $user->church_id;
-        $question = Question::create($data);
-
-        return response()->json(['message' => 'Pergunta cadastrada!', 'question' => $question], 201);
+    if ($count >= 15) {
+        return response()->json(['error' => "Limite de 15 perguntas atingido para o Nível {$request->level}."], 422);
     }
+
+    $data = $request->validate([
+        'level' => 'required|integer',
+        'title' => 'required|string',
+        'option_a' => 'required|string',
+        'option_b' => 'required|string',
+        'option_c' => 'required|string',
+        'option_d' => 'required|string',
+        'correct_option' => 'required|string|max:1',
+        'hint' => 'nullable|string',
+        'explanation' => 'required|string',
+    ]);
+
+    $data['church_id'] = $user->church_id;
+    $question = Question::create($data);
+
+    return response()->json($question, 201);
+}
+public function update(Request $request, $id)
+{
+    $user = $request->user();
+    $question = Question::where('id', $id)->where('church_id', $user->church_id)->firstOrFail();
+
+    $data = $request->validate([
+        'level' => 'required|integer',
+        'title' => 'required|string',
+        'option_a' => 'required|string',
+        'option_b' => 'required|string',
+        'option_c' => 'required|string',
+        'option_d' => 'required|string',
+        'correct_option' => 'required|string|max:1',
+        'hint' => 'nullable|string',
+        'explanation' => 'required|string',
+    ]);
+
+    $question->update($data);
+    return response()->json($question);
+}
+public function destroy(Request $request, $id)
+{
+    $user = $request->user();
+    $question = Question::where('id', $id)->where('church_id', $user->church_id)->firstOrFail();
+
+    $question->delete();
+    return response()->json(['message' => 'Pergunta removida!']);
+}
 
     public function downloadMyManual(Request $request)
 {

@@ -12,6 +12,7 @@ import AcolitoQuiz from './pages/AcolitoQuiz';
 import AcolitoRanking from './pages/AcolitoRanking';
 import AdminRanking from './pages/AdminRanking';
 import AdminDetalhamentoAcolito from './pages/AdminDetalhamentoAcolito'; // ADICIONADO
+import AcolitoManuais from './pages/AcolitoManuais';
 
 export default function AppRoutes() {
     return (
@@ -107,6 +108,8 @@ export default function AppRoutes() {
                         </ProtectedRoute>
                     } 
                 />
+
+                <Route path="/acolito/manuais" element={<AcolitoManuais />} />
 
                 {/* Fallback para evitar 404 - Sempre no final */}
                 <Route path="*" element={<Navigate to="/" />} />

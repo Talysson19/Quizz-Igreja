@@ -7,8 +7,9 @@ export default function AdminPerguntas() {
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState(null); // Para saber se estamos editando
 
-    const [formData, setFormData] = useState({
+    const initialForm = {
         level: 1,
         title: '',
         option_a: '',
@@ -18,7 +19,9 @@ export default function AdminPerguntas() {
         correct_option: 'a',
         hint: '',
         explanation: '' 
-    });
+    };
+
+    const [formData, setFormData] = useState(initialForm);
 
     async function fetchQuestions() {
         try {
@@ -31,22 +34,57 @@ export default function AdminPerguntas() {
         }
     }
 
-    async function handleCreateQuestion(e) {
+    // CREATE ou UPDATE
+    async function handleSubmit(e) {
         e.preventDefault();
         try {
-            await api.post('/admin/questions', formData);
-            alert("Pergunta cadastrada com sucesso!");
-            setShowForm(false);
-            setFormData({ 
-                level: 1, title: '', option_a: '', option_b: '', 
-                option_c: '', option_d: '', correct_option: 'a', 
-                hint: '', explanation: '' 
-            });
+            if (editingId) {
+                await api.put(`/admin/questions/${editingId}`, formData);
+                alert("Pergunta atualizada!");
+            } else {
+                await api.post('/admin/questions', formData);
+                alert("Pergunta cadastrada!");
+            }
+            
+            resetForm();
             fetchQuestions();
         } catch (err) {
-            console.error("Erro detalhado:", err.response?.data);
-            alert("Erro ao salvar pergunta. Verifique se todos os campos estão preenchidos.");
+            alert(err.response?.data?.error || "Erro ao salvar pergunta.");
         }
+    }
+
+    // DELETE
+    async function handleDelete(id) {
+        if (!window.confirm("Deseja realmente excluir esta pergunta?")) return;
+        try {
+            await api.delete(`/admin/questions/${id}`);
+            fetchQuestions();
+        } catch (err) {
+            alert("Erro ao excluir.");
+        }
+    }
+
+    function handleEdit(q) {
+        setEditingId(q.id);
+        setFormData({
+            level: q.level,
+            title: q.title,
+            option_a: q.option_a,
+            option_b: q.option_b,
+            option_c: q.option_c,
+            option_d: q.option_d,
+            correct_option: q.correct_option,
+            hint: q.hint,
+            explanation: q.explanation
+        });
+        setShowForm(true);
+        window.scrollTo(0, 0); // Sobe a tela para o form
+    }
+
+    function resetForm() {
+        setFormData(initialForm);
+        setEditingId(null);
+        setShowForm(false);
     }
 
     useEffect(() => { fetchQuestions(); }, []);
@@ -54,98 +92,61 @@ export default function AdminPerguntas() {
     return (
         <div className="min-h-screen bg-gray-50 p-8" translate="no">
             <div className="max-w-4xl mx-auto">
-                <button 
-                    onClick={() => navigate('/admin/dashboard')}
-                    className="flex items-center gap-2 text-gray-500 hover:text-purple-600 transition-all mb-6 group"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    <span className="text-sm font-semibold">Voltar ao Painel</span>
+                <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-2 text-gray-500 mb-6">
+                    ← Voltar ao Painel
                 </button>
                 
                 <header className="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Banco de Perguntas</h1>
-                        <p className="text-gray-500 text-sm">Gerencie os desafios dos níveis 1 e 2.</p>
-                    </div>
-                    <button 
-                        onClick={() => setShowForm(!showForm)}
-                        className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700 transition-all shadow-md"
-                    >
-                        {showForm ? 'Fechar' : '+ Nova Pergunta'}
+                    <h1 className="text-2xl font-bold">Banco de Perguntas</h1>
+                    <button onClick={() => showForm ? resetForm() : setShowForm(true)} className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold">
+                        {showForm ? 'Cancelar' : '+ Nova Pergunta'}
                     </button>
                 </header>
 
                 {showForm && (
-                    <div className="bg-white p-6 rounded-2xl shadow-md border border-purple-100 mb-8 animate-in slide-in-from-top duration-300">
-                        <form onSubmit={handleCreateQuestion} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Enunciado</label>
-                                <textarea required className="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none focus:border-purple-500" rows="2" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-                            </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-md border border-purple-100 mb-8">
+                        <h2 className="text-purple-600 font-bold mb-4 uppercase text-xs">{editingId ? 'Editando Pergunta' : 'Nova Pergunta'}</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <textarea placeholder="Enunciado" className="w-full border p-2 rounded" rows="2" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-4">
                                 {['a', 'b', 'c', 'd'].map(opt => (
-                                    <div key={opt}>
-                                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Opção {opt.toUpperCase()}</label>
-                                        <input type="text" required className="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none focus:border-purple-500" value={formData[`option_${opt}`]} onChange={e => setFormData({...formData, [`option_${opt}`]: e.target.value})} />
-                                    </div>
+                                    <input key={opt} type="text" placeholder={`Opção ${opt.toUpperCase()}`} className="border p-2 rounded" value={formData[`option_${opt}`]} onChange={e => setFormData({...formData, [`option_${opt}`]: e.target.value})} required />
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Correta</label>
-                                    <select className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" value={formData.correct_option} onChange={e => setFormData({...formData, correct_option: e.target.value})}>
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="text-xs text-gray-400 font-bold">CORRETA</label>
+                                    <select className="w-full border p-2 rounded" value={formData.correct_option} onChange={e => setFormData({...formData, correct_option: e.target.value})}>
                                         <option value="a">A</option><option value="b">B</option><option value="c">C</option><option value="d">D</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nível</label>
-                                    <select className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" value={formData.level} onChange={e => setFormData({...formData, level: parseInt(e.target.value)})}>
-                                        <option value="1">1</option><option value="2">2</option>
-                                    </select>
+                                <div className="flex-1">
+                                    <label className="text-xs text-gray-400 font-bold">NÍVEL</label>
+                                    <input type="number" className="w-full border p-2 rounded" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value})} />
                                 </div>
                             </div>
 
-                            {/* CAMPOS ADICIONADOS ABAIXO */}
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Dica (Opcional)</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none focus:border-purple-500" 
-                                    placeholder="Ex: Pense na cor da esperança..."
-                                    value={formData.hint} 
-                                    onChange={e => setFormData({...formData, hint: e.target.value})} 
-                                />
-                            </div>
+                            <input type="text" placeholder="Dica (opcional)" className="w-full border p-2 rounded" value={formData.hint} onChange={e => setFormData({...formData, hint: e.target.value})} />
+                            <textarea placeholder="Explicação" className="w-full border p-2 rounded" rows="2" value={formData.explanation} onChange={e => setFormData({...formData, explanation: e.target.value})} required />
 
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Explicação da Resposta</label>
-                                <textarea 
-                                    required 
-                                    className="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none focus:border-purple-500" 
-                                    rows="2" 
-                                    placeholder="Explique por que esta é a alternativa correta..."
-                                    value={formData.explanation} 
-                                    onChange={e => setFormData({...formData, explanation: e.target.value})} 
-                                />
-                            </div>
-
-                            <button type="submit" className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 shadow-lg transition-all">Salvar Pergunta</button>
+                            <button className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg">{editingId ? 'Salvar Alterações' : 'Cadastrar Pergunta'}</button>
                         </form>
                     </div>
                 )}
 
                 <div className="space-y-4">
-                    {loading ? <div className="text-center">Carregando...</div> : questions.map(q => (
-                        <div key={q.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-                            <div className="flex justify-between">
-                                <p className="text-slate-700 font-semibold">{q.title}</p>
-                                <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">NÍVEL {q.level}</span>
+                    {questions.map(q => (
+                        <div key={q.id} className="bg-white p-5 rounded-xl border flex justify-between items-start">
+                            <div>
+                                <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-black mr-2 uppercase text-xs">Nível {q.level}</span>
+                                <p className="text-slate-700 font-bold mt-1">{q.title}</p>
                             </div>
-                            <p className="text-gray-400 text-xs mt-2 italic">{q.explanation}</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => handleEdit(q)} className="text-blue-500 font-bold text-xs">EDITAR</button>
+                                <button onClick={() => handleDelete(q.id)} className="text-red-400 font-bold text-xs">EXCLUIR</button>
+                            </div>
                         </div>
                     ))}
                 </div>

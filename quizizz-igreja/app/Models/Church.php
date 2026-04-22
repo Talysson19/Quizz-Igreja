@@ -12,4 +12,8 @@ class Church extends Model
     public function users() {
         return $this->hasMany(User::class);
     }
+
+    public function manuals() {
+    return $this->hasMany(Manual::class);
+}
 }

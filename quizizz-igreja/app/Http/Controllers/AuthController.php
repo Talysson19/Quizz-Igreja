@@ -240,4 +240,43 @@ public function listAcolytes() {
     // Retorna todos os usuários que são acólitos daquela igreja
     return response()->json(User::where('role', 'acolyte')->get());
 }
+
+// 1. Editar Acólito
+public function updateAcolyte(Request $request, $id)
+{
+    $admin = $request->user();
+
+    // Busca o acólito garantindo que ele seja da MESMA igreja do admin
+    $acolyte = User::where('id', $id)
+                   ->where('church_id', $admin->church_id)
+                   ->where('role', 'acolyte')
+                   ->firstOrFail();
+
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|unique:users,email,' . $id,
+    ]);
+
+    $acolyte->update([
+        'name' => $request->name,
+        'email' => $request->email,
+    ]);
+
+    return response()->json(['message' => 'Acólito atualizado com sucesso!', 'acolyte' => $acolyte]);
+}
+
+// 2. Excluir Acólito
+public function deleteAcolyte(Request $request, $id)
+{
+    $admin = $request->user();
+
+    $acolyte = User::where('id', $id)
+                   ->where('church_id', $admin->church_id)
+                   ->where('role', 'acolyte')
+                   ->firstOrFail();
+
+    $acolyte->delete();
+
+    return response()->json(['message' => 'Acólito removido da paróquia.']);
+}
 }
