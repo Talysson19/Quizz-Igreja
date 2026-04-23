@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Church extends Model
 {
     // Permitir que o Laravel preencha esses campos no cadastro
-    protected $fillable = ['name', 'responsible_name'];
+    protected $fillable = ['name', 'responsible_name', 'manual_path'];
 
     public function users() {
         return $this->hasMany(User::class);
