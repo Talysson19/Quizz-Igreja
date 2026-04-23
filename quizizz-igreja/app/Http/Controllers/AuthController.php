@@ -119,7 +119,7 @@ class AuthController extends Controller
         $acolyte = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make('mudar123'),
+            'password' => Hash::make('Senha123'),
             'church_id' => $admin->church_id,
             'role' => 'acolyte',
             'must_change_password' => true,
@@ -191,7 +191,7 @@ class AuthController extends Controller
             'must_change_password' => true
         ]);
 
-        return response()->json(['message' => "Senha de {$acolyte->name} resetada para: mudar123"]);
+        return response()->json(['message' => "Senha de {$acolyte->name} resetada para: Senha123"]);
     }
 
     public function changePassword(Request $request)

@@ -69,7 +69,6 @@ public function index(Request $request)
             'user_id' => $user->id,
             'question_id' => $question->id,
             'is_correct' => $isCorrect,
-            'used_hint' => $request->use_hint ?? false,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
