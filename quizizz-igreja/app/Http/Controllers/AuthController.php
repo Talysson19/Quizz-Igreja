@@ -138,7 +138,6 @@ public function registerAcolyte(Request $request)
 {
     $admin = $request->user();
 
-    // Segurança: Apenas ADM pode cadastrar acólitos [cite: 14]
     if ($admin->role !== 'admin') {
         return response()->json(['error' => 'Acesso negado.'], 403);
     }
@@ -146,22 +145,68 @@ public function registerAcolyte(Request $request)
     $request->validate([
         'name' => 'required|string|max:255',
         'email' => 'required|string|email|unique:users',
-        'password' => 'required|string|min:6', // Senha inicial criada pelo ADM [cite: 28]
+        // Removi a validação de password daqui pois ela é fixa no create
     ]);
 
     $acolyte = User::create([
         'name' => $request->name,
         'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'church_id' => $admin->church_id, // Vincula automaticamente à igreja do ADM [cite: 27]
-        'role' => 'acolyte',
-        'must_change_password' => true, // Obriga a trocar no 1º acesso [cite: 31]
+        'password' => Hash::make('mudar123'), // Senha padrão
+        'church_id' => $admin->church_id,
+        'role' => 'acolito', // Sincronizado com a migration
+        'must_change_password' => true,
     ]);
 
     return response()->json([
         'message' => 'Acólito cadastrado com sucesso!',
         'acolyte' => $acolyte->name
     ], 201);
+}
+
+// ⚠️ AJUSTE IMPORTANTE: Mude de 'acolyte' para 'acolito' em todos estes:
+
+public function adminDashboard(Request $request)
+{
+    $admin = $request->user();
+    if ($admin->role !== 'admin') {
+        return response()->json(['error' => 'Acesso negado.'], 403);
+    }
+
+    $acolytes = User::where('church_id', $admin->church_id)
+        ->where('role', 'acolito') // Ajustado
+        ->select('id', 'name', 'email', 'points', 'must_change_password')
+        ->get();
+
+    return response()->json([
+        'church_name' => Church::find($admin->church_id)->name,
+        'total_acolytes' => $acolytes->count(),
+        'data' => $acolytes
+    ]);
+}
+
+public function listAcolytes() {
+    return response()->json(User::where('role', 'acolito')->get()); // Ajustado
+}
+
+public function updateAcolyte(Request $request, $id)
+{
+    $admin = $request->user();
+    $acolyte = User::where('id', $id)
+                   ->where('church_id', $admin->church_id)
+                   ->where('role', 'acolito') // Ajustado
+                   ->firstOrFail();
+    // ... resto do código
+}
+
+public function deleteAcolyte(Request $request, $id)
+{
+    $admin = $request->user();
+    $acolyte = User::where('id', $id)
+                   ->where('church_id', $admin->church_id)
+                   ->where('role', 'acolito') // Ajustado
+                   ->firstOrFail();
+    $acolyte->delete();
+    return response()->json(['message' => 'Acólito removido da paróquia.']);
 }
 
 public function changePassword(Request $request)
