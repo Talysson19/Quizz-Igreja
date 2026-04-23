@@ -9,9 +9,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 // ---------------------------------------------------------
-// 1. Rotas de Manutenção (Públicas temporariamente para conserto)
+// 1. Ferramentas de Manutenção (DESATIVADAS)
+// Para usar: Descomente o bloco abaixo e dê um push.
 // ---------------------------------------------------------
-
+/*
 Route::get('/teste-db', function() {
     try {
         DB::connection()->getPdo();
@@ -36,25 +37,19 @@ Route::get('/force-migrate', function () {
 Route::get('/debug-db', function () {
     try {
         $tables = DB::select('SHOW TABLES');
-        // Pega o nome da base de dados para mapear a chave do objeto
         $dbNameKey = "Tables_in_" . env('DB_DATABASE', 'defaultdb');
-
         $result = [];
         foreach ($tables as $table) {
             $tableName = $table->$dbNameKey;
             $columns = DB::select("DESCRIBE $tableName");
             $result[$tableName] = $columns;
         }
-
-        return response()->json([
-            'database' => env('DB_DATABASE'),
-            'tables_count' => count($tables),
-            'structure' => $result
-        ]);
+        return response()->json(['database' => env('DB_DATABASE'), 'structure' => $result]);
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }
 });
+*/
 
 // ---------------------------------------------------------
 // 2. Rotas Públicas do App
@@ -89,7 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/manuals/{id}', [ManualController::class, 'destroy']);
     Route::get('/manuals/{id}/download', [ManualController::class, 'download']);
 
-    // Administrativo
+    // Administrativo (Gestão de Acólitos e Dashboard)
     Route::get('/admin/dashboard', [AuthController::class, 'adminDashboard']);
     Route::get('/admin/acolytes', [AuthController::class, 'listAcolytes']);
     Route::post('/admin/acolytes', [AuthController::class, 'registerAcolyte']);
