@@ -5,6 +5,7 @@ use App\Http\Controllers\ManualController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\QuestionController;
+use Illuminate\Support\Facades\Artisan;
 
 // 1. Rotas Públicas
 Route::post('/register', [AuthController::class, 'register']);
@@ -58,6 +59,23 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['status' => 'Conectado ao banco com sucesso!']);
     } catch (\Exception $e) {
         return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
+
+Route::get('/force-migrate', function () {
+    try {
+        // Roda o migrate:fresh para limpar e criar tudo do zero com as colunas novas
+        Artisan::call('migrate:fresh', ['--force' => true]);
+
+        return response()->json([
+            'status' => 'sucesso',
+            'output' => Artisan::output()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'erro',
+            'mensagem' => $e->getMessage()
+        ], 500);
     }
 });
 });
