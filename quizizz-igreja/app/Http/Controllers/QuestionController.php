@@ -102,20 +102,33 @@ public function index(Request $request)
     }
 
     // 4. Busca Perguntas com Trava de Nível (Cenário 8)
-    public function getQuestionsByLevel(Request $request, $level)
+   public function getQuestionsByLevel(Request $request, $level)
 {
     $user = $request->user();
 
-    // Trava de Nível (Pode ser dinâmica no futuro, por enquanto mantive a sua)
-    if ($level == 2 && $user->points < 50) {
-        return response()->json(['error' => 'Nível Bloqueado!', 'message' => 'Alcance 50 pontos.'], 403);
+    // Se não for o nível 1, precisamos verificar o nível anterior
+    if ($level > 1) {
+        $prevLevel = $level - 1;
+
+        $totalPrev = Question::where('church_id', $user->church_id)->where('level', $prevLevel)->count();
+        $completedPrev = DB::table('user_answers')
+            ->join('questions', 'user_answers.question_id', '=', 'questions.id')
+            ->where('user_answers.user_id', $user->id)
+            ->where('questions.level', $prevLevel)
+            ->count();
+
+        if ($totalPrev > 0 && $completedPrev < $totalPrev) {
+            return response()->json([
+                'error' => 'Nível Bloqueado!',
+                'message' => 'Você precisa concluir todas as questões do Nível ' . $prevLevel . ' primeiro.'
+            ], 403);
+        }
     }
 
     $questions = Question::where('church_id', $user->church_id)
         ->where('level', $level)
         ->get()
         ->map(function($q) use ($user) {
-            // Adicionamos um campo virtual para o React saber se libera o botão "Pular"
             $q->already_answered = DB::table('user_answers')
                 ->where('user_id', $user->id)
                 ->where('question_id', $q->id)
@@ -131,15 +144,21 @@ public function index(Request $request)
 {
     $user = $request->user();
 
-    // 1. Buscamos todos os níveis que POSSUEM perguntas cadastradas nesta igreja
+    // 1. Pegamos todos os níveis que POSSUEM perguntas
     $allLevels = Question::where('church_id', $user->church_id)
         ->select('level')
         ->distinct()
         ->orderBy('level', 'asc')
         ->get();
 
-    // 2. Para cada nível existente, contamos quantas o usuário já respondeu
+    // 2. Calculamos o progresso real por nível
     $levelsProgress = $allLevels->map(function($lvl) use ($user) {
+        // Total de questões que existem NESTE nível
+        $totalInLevel = Question::where('church_id', $user->church_id)
+            ->where('level', $lvl->level)
+            ->count();
+
+        // Quantas o usuário já respondeu NESTE nível
         $completed = DB::table('user_answers')
             ->join('questions', 'user_answers.question_id', '=', 'questions.id')
             ->where('user_answers.user_id', $user->id)
@@ -148,23 +167,18 @@ public function index(Request $request)
 
         return [
             'level' => $lvl->level,
-            'completed_questions' => $completed
+            'total_questions' => $totalInLevel, // Adicionado
+            'completed_questions' => $completed,
+            'is_completed' => ($totalInLevel > 0 && $completed >= $totalInLevel) // Adicionado
         ];
     });
-
-    // 3. Totais gerais para o Certificado
-    $totalQuestions = Question::where('church_id', $user->church_id)->count();
-
-    $answeredQuestions = DB::table('user_answers')
-        ->where('user_id', $user->id)
-        ->count();
 
     return response()->json([
         'user_name' => $user->name,
         'total_points' => $user->points,
-        'total_questions_church' => $totalQuestions,
-        'total_answered_user' => $answeredQuestions,
-        'levels_progress' => $levelsProgress // Agora contém todos os níveis!
+        'total_questions_church' => Question::where('church_id', $user->church_id)->count(),
+        'total_answered_user' => DB::table('user_answers')->where('user_id', $user->id)->count(),
+        'levels_progress' => $levelsProgress
     ]);
 }
 

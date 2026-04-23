@@ -9,16 +9,15 @@ export default function AcolitoDashboard() {
     const [stats, setStats] = useState({
         user_name: userStorage?.name || 'Acólito',
         total_points: 0,
-        total_questions_church: 0, // Total de perguntas que existem na igreja
-        total_answered_user: 0,    // Total que o usuário já respondeu
-        levels_progress: []        // Lista de níveis vinda do banco
+        total_questions_church: 0, 
+        total_answered_user: 0,    
+        levels_progress: []        
     });
 
     const [loading, setLoading] = useState(true);
 
     async function loadAcolitoData() {
         try {
-            // Chamada para a rota que atualizamos no QuestionController
             const response = await api.get('/user/progress');
             setStats({
                 user_name: response.data.user_name,
@@ -52,12 +51,11 @@ export default function AcolitoDashboard() {
             link.click();
             link.remove();
         } catch (err) {
-            // Erro dinâmico vindo do Laravel
-            alert("Você ainda não concluiu todas as perguntas disponíveis!");
+            alert("Erro: Você precisa concluir todas as perguntas de todos os níveis primeiro!");
         }
     }
 
-    // Regra do Certificado: Só libera se houver perguntas e ele respondeu TODAS
+    // Regra do Certificado: Concluiu TUDO o que a igreja disponibilizou
     const isCertificateReleased = stats.total_questions_church > 0 && 
                                  stats.total_answered_user >= stats.total_questions_church;
 
@@ -78,25 +76,25 @@ export default function AcolitoDashboard() {
                 </header>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                    {/* CARD PONTUAÇÃO */}
+                    {/* PONTOS */}
                     <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-3xl shadow-lg text-white flex flex-col items-center justify-center">
                         <span className="text-[10px] font-bold uppercase opacity-80">Pontos</span>
                         <span className="text-4xl font-black">{stats.total_points}</span>
                     </div>
 
-                    {/* CARD MANUAL */}
+                    {/* MANUAIS */}
                     <div onClick={() => navigate('/acolito/manuais')} className="bg-white p-6 rounded-3xl border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all group">
                         <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📚</span>
                         <span className="font-bold text-sm text-slate-700">Manuais</span>
                     </div>
 
-                    {/* CARD RANKING */}
+                    {/* RANKING */}
                     <div onClick={() => navigate('/acolito/ranking')} className="bg-white p-6 rounded-3xl border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all group">
                         <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">🏆</span>
                         <span className="font-bold text-sm text-slate-700">Ranking</span>
                     </div>
 
-                    {/* CARD CERTIFICADO DINÂMICO */}
+                    {/* CERTIFICADO DINÂMICO */}
                     {isCertificateReleased ? (
                         <div onClick={handleDownloadCertificate} className="bg-gradient-to-br from-amber-400 to-orange-500 p-6 rounded-3xl shadow-lg text-white flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition-all">
                             <span className="text-2xl animate-bounce">🎓</span>
@@ -113,16 +111,18 @@ export default function AcolitoDashboard() {
                 </div>
 
                 <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-slate-800 mb-4">Selecione seu Desafio</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-4">Sua Jornada de Formação</h3>
                     
                     {loading ? (
-                        <div className="text-center py-10 text-gray-400 font-medium">Carregando níveis...</div>
+                        <div className="text-center py-10 text-gray-400 font-medium animate-pulse">Carregando níveis...</div>
                     ) : (
                         stats.levels_progress.length > 0 ? (
-                            stats.levels_progress.map((lvl) => {
-                                // Lógica de Trava: Nível 1 livre, Nível 2 precisa de 50 pontos.
-                                // Você pode adicionar regras para Nível 3, 4 etc aqui.
-                                const isLocked = lvl.level === 2 && stats.total_points < 50;
+                            stats.levels_progress.map((lvl, index) => {
+                                // LÓGICA DE TRAVA LINEAR:
+                                // 1. O Nível 1 (index 0) está sempre livre.
+                                // 2. O Nível N só libera se o Nível N-1 estiver completo (is_completed === true).
+                                const previousLevel = index > 0 ? stats.levels_progress[index - 1] : null;
+                                const isLocked = index === 0 ? false : (previousLevel ? !previousLevel.is_completed : true);
 
                                 return (
                                     <div 
@@ -142,10 +142,15 @@ export default function AcolitoDashboard() {
                                                 <h4 className="text-lg font-bold text-slate-800">
                                                     {lvl.level === 1 ? 'Nível 1: Fundamentos' : 
                                                      lvl.level === 2 ? 'Nível 2: Mestre de Cerimônias' : 
-                                                     `Nível ${lvl.level}: Desafio Avançado`}
+                                                     `Nível ${lvl.level}: Formação Contínua`}
                                                 </h4>
                                                 <p className="text-sm text-gray-400">
-                                                    {isLocked ? 'Alcance 50 pontos para desbloquear.' : `${lvl.completed_questions} questões respondidas.`}
+                                                    {isLocked 
+                                                        ? `Bloqueado. Conclua o Nível ${lvl.level - 1} para liberar.` 
+                                                        : lvl.is_completed 
+                                                            ? '✅ Nível concluído!' 
+                                                            : `${lvl.completed_questions} / ${lvl.total_questions} respondidas.`
+                                                    }
                                                 </p>
                                             </div>
                                         </div>
@@ -156,8 +161,8 @@ export default function AcolitoDashboard() {
                                 );
                             })
                         ) : (
-                            <div className="bg-white p-10 rounded-3xl text-center border border-gray-100">
-                                <p className="text-gray-400">Nenhuma pergunta disponível no momento.</p>
+                            <div className="bg-white p-10 rounded-3xl text-center border border-gray-100 shadow-sm">
+                                <p className="text-gray-400">Nenhuma pergunta disponível para sua paróquia ainda.</p>
                             </div>
                         )
                     )}
