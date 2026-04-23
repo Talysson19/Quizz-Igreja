@@ -89,6 +89,8 @@ POST /api/admin/questions
 POST /api/manuals
 PUT /api/admin/acolytes/{id}
 
+```
+
 
 ## 🏗️ Modelo de Dados (ER) & Equipe
 
