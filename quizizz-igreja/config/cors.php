@@ -20,8 +20,7 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-    'http://localhost:5173', // Para você testar no seu PC
-    'https://sua-url-do-frontend.onrender.com', // A URL que o Render vai te dar
+    '*', // A URL que o Render vai te dar
 ],
 
     'allowed_origins_patterns' => [],
