@@ -41,3 +41,5 @@ EXPOSE 80
 
 # Comando para rodar as migrations e ligar o servidor
 CMD php artisan migrate --force && apache2-foreground
+
+# Para construir a imagem, use:
