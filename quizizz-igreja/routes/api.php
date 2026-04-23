@@ -51,4 +51,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Configurações
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
+
+    Route::get('/teste-db', function() {
+    try {
+        \DB::connection()->getPdo();
+        return response()->json(['status' => 'Conectado ao banco com sucesso!']);
+    } catch (\Exception $e) {
+        return response()->json(['erro' => $e->getMessage()], 500);
+    }
+});
 });
