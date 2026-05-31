@@ -22,6 +22,7 @@ class User extends Authenticatable
         'role',
         'must_change_password',
         'points',
+        'email_verified_at',
     ];
 
     /**
@@ -38,7 +39,7 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            // Removida a linha do email_verified_at que causava o erro 500
+            'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

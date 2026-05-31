@@ -13,10 +13,12 @@ return new class extends Migration
             $table->foreignId('church_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->enum('role', ['admin', 'acolyte'])->default('acolyte');
             $table->integer('points')->default(0);
             $table->boolean('must_change_password')->default(true);
+            $table->rememberToken();
             $table->timestamps();
         });
     }

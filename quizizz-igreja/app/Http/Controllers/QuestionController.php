@@ -176,22 +176,36 @@ public function index(Request $request)
         'user_name' => $user->name,
         'total_points' => $user->points,
         'total_questions_church' => Question::where('church_id', $user->church_id)->count(),
-        'total_answered_user' => DB::table('user_answers')->where('user_id', $user->id)->count(),
+        'total_answered_user' => DB::table('user_answers')
+            ->join('questions', 'user_answers.question_id', '=', 'questions.id')
+            ->where('user_answers.user_id', $user->id)
+            ->where('questions.church_id', $user->church_id)
+            ->count(),
+        'certificate_enabled' => (bool) (Church::find($user->church_id)?->certificate_enabled ?? false),
         'levels_progress' => $levelsProgress
     ]);
 }
 
     // 6. Geração de Certificado (Cenário 10)
-    public function generateCertificate(Request $request)
+public function generateCertificate(Request $request)
 {
     $user = $request->user();
+    $church = Church::find($user->church_id);
+
+    if (!$church || !$church->certificate_enabled) {
+        return response()->json([
+            'error' => 'O certificado ainda não foi liberado pela coordenação da sua igreja.'
+        ], 403);
+    }
 
     // 1. Quantas perguntas existem no total para a igreja dele?
     $totalQuestionsInChurch = Question::where('church_id', $user->church_id)->count();
 
     // 2. Quantas ele já respondeu?
     $completedCount = DB::table('user_answers')
-        ->where('user_id', $user->id)
+        ->join('questions', 'user_answers.question_id', '=', 'questions.id')
+        ->where('user_answers.user_id', $user->id)
+        ->where('questions.church_id', $user->church_id)
         ->count();
 
     // 3. Validação: Só libera se ele respondeu TUDO e se existe pelo menos uma pergunta
@@ -202,12 +216,11 @@ public function index(Request $request)
         ], 403);
     }
 
-    $church = Church::find($user->church_id);
     $data = [
         'name' => $user->name,
         'date' => now()->format('d/m/Y'),
         'points' => $user->points,
-        'church' => $church ? $church->name : 'Paróquia'
+        'church' => $church->name
     ];
 
     $pdf = Pdf::loadView('emails.certificate', $data)->setPaper('a4', 'landscape');

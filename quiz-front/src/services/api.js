@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://quizz-igreja.onrender.com/api',
+    baseURL: import.meta.env.VITE_API_URL || 'https://quizz-igreja.onrender.com/api',
 });
 
 api.interceptors.request.use(async (config) => {

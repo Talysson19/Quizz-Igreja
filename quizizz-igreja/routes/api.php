@@ -54,10 +54,8 @@ Route::get('/debug-db', function () {
 // ---------------------------------------------------------
 // 2. Rotas Públicas do App
 // ---------------------------------------------------------
-Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register-church', [AuthController::class, 'registerChurch']);
-Route::post('/admin/reset-acolyte-password', [AuthController::class, 'resetAcolytePassword']);
 
 // ---------------------------------------------------------
 // 3. Rotas Protegidas (Requerem Token)
@@ -90,6 +88,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/acolytes', [AuthController::class, 'registerAcolyte']);
     Route::put('/admin/acolytes/{id}', [AuthController::class, 'updateAcolyte']);
     Route::delete('/admin/acolytes/{id}', [AuthController::class, 'deleteAcolyte']);
+    Route::post('/admin/reset-acolyte-password', [AuthController::class, 'resetAcolytePassword']);
+    Route::put('/admin/church/toggle-certificate', [AuthController::class, 'toggleCertificate']);
 
     // CRUD de Perguntas
     Route::post('/admin/questions', [QuestionController::class, 'store']);

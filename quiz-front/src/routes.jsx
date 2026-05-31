@@ -109,7 +109,14 @@ export default function AppRoutes() {
                     } 
                 />
 
-                <Route path="/acolito/manuais" element={<AcolitoManuais />} />
+                <Route
+                    path="/acolito/manuais"
+                    element={
+                        <ProtectedRoute>
+                            <AcolitoManuais />
+                        </ProtectedRoute>
+                    }
+                />
 
                 {/* Fallback para evitar 404 - Sempre no final */}
                 <Route path="*" element={<Navigate to="/" />} />

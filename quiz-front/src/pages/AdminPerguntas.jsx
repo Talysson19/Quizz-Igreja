@@ -28,7 +28,7 @@ export default function AdminPerguntas() {
             const response = await api.get('/questions');
             setQuestions(response.data);
         } catch (err) {
-            console.error("Erro ao buscar perguntas");
+            console.error("Erro ao buscar perguntas", err);
         } finally {
             setLoading(false);
         }
@@ -59,7 +59,7 @@ export default function AdminPerguntas() {
         try {
             await api.delete(`/admin/questions/${id}`);
             fetchQuestions();
-        } catch (err) {
+        } catch {
             alert("Erro ao excluir.");
         }
     }
@@ -137,7 +137,9 @@ export default function AdminPerguntas() {
                 )}
 
                 <div className="space-y-4">
-                    {questions.map(q => (
+                    {loading ? (
+                        <p className="bg-white p-6 rounded-xl border text-gray-400 italic">Carregando perguntas...</p>
+                    ) : questions.map(q => (
                         <div key={q.id} className="bg-white p-5 rounded-xl border flex justify-between items-start">
                             <div>
                                 <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-black mr-2 uppercase text-xs">Nível {q.level}</span>

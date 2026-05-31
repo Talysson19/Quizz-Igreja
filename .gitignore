@@ -14,6 +14,12 @@ quizizz-igreja/storage/*.key
 
 # Logs e Cache do Laravel
 quizizz-igreja/storage/logs/
-quizizz-igreja/storage/framework/sessions/
-quizizz-igreja/storage/framework/views/
-quizizz-igreja/storage/framework/cache/
+quizizz-igreja/storage/framework/sessions/*
+!quizizz-igreja/storage/framework/sessions/.gitignore
+quizizz-igreja/storage/framework/views/*
+!quizizz-igreja/storage/framework/views/.gitignore
+quizizz-igreja/storage/framework/cache/*
+!quizizz-igreja/storage/framework/cache/.gitignore
+!quizizz-igreja/storage/framework/cache/data/
+quizizz-igreja/storage/framework/cache/data/*
+!quizizz-igreja/storage/framework/cache/data/.gitignore

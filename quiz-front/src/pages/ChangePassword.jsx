@@ -33,7 +33,7 @@ export default function ChangePassword() {
             localStorage.setItem('@QuizIgreja:user', JSON.stringify(user));
 
             navigate('/dashboard');
-        } catch (err) {
+        } catch {
             alert("Erro ao atualizar senha. Tente novamente.");
         } finally {
             setLoading(false);

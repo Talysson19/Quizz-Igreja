@@ -95,8 +95,37 @@ class AuthController extends Controller
 
         return response()->json([
             'church_name' => $church ? $church->name : 'Não encontrada',
+            'certificate_enabled' => (bool) ($church?->certificate_enabled ?? false),
             'total_acolytes' => $acolytes->count(),
             'data' => $acolytes
+        ]);
+    }
+
+    public function toggleCertificate(Request $request)
+    {
+        $admin = $request->user();
+
+        if ($admin->role !== 'admin') {
+            return response()->json(['error' => 'Acesso negado.'], 403);
+        }
+
+        $church = Church::findOrFail($admin->church_id);
+
+        $data = $request->validate([
+            'certificate_enabled' => 'nullable|boolean',
+        ]);
+
+        $church->certificate_enabled = array_key_exists('certificate_enabled', $data)
+            ? (bool) $data['certificate_enabled']
+            : ! $church->certificate_enabled;
+
+        $church->save();
+
+        return response()->json([
+            'message' => $church->certificate_enabled
+                ? 'Certificados liberados para esta igreja.'
+                : 'Certificados bloqueados para esta igreja.',
+            'certificate_enabled' => (bool) $church->certificate_enabled,
         ]);
     }
 

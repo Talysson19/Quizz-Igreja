@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Church;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -24,10 +25,16 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'church_id' => Church::query()->value('id') ?? Church::create([
+                'name' => fake()->company(),
+                'responsible_name' => fake()->name(),
+            ])->id,
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'role' => 'acolyte',
+            'must_change_password' => false,
             'remember_token' => Str::random(10),
         ];
     }

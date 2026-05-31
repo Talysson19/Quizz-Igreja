@@ -10,7 +10,7 @@ export default function AcolitoQuiz() {
     const [showExplanation, setShowExplanation] = useState(false);
     const [lastResult, setLastResult] = useState(null);
     const [useHint, setUseHint] = useState(false);
-    const [isAnswered, setIsAnswered] = useState(false);
+    const [answeredQuestionIds, setAnsweredQuestionIds] = useState(() => new Set());
 
     // 1. Carregar perguntas do nível
     useEffect(() => {
@@ -26,15 +26,6 @@ export default function AcolitoQuiz() {
         fetchQuestions();
     }, [level, navigate]);
 
-    // 2. Monitorar mudança de pergunta e status de resposta
-    useEffect(() => {
-        if (questions[currentIndex]) {
-            setIsAnswered(questions[currentIndex].already_answered);
-            // Se já foi respondida no passado, resetamos a explicação para não confundir
-            setShowExplanation(false); 
-        }
-    }, [currentIndex, questions]);
-
     async function handleAnswer(option) {
         if (isAnswered) return; // Trava para não responder duas vezes na mesma sessão
         
@@ -46,11 +37,11 @@ export default function AcolitoQuiz() {
             });
             setLastResult(response.data);
             setShowExplanation(true);
-            setIsAnswered(true);
+            setAnsweredQuestionIds(previous => new Set(previous).add(questions[currentIndex].id));
         } catch (err) {
             // Caso o backend negue porque já existe resposta no banco
             if (err.response?.status === 403) {
-                setIsAnswered(true);
+                setAnsweredQuestionIds(previous => new Set(previous).add(questions[currentIndex].id));
                 setShowExplanation(true);
                 setLastResult({ 
                     correct: false, 
@@ -63,6 +54,7 @@ export default function AcolitoQuiz() {
     if (questions.length === 0) return <div className="p-10 text-center font-bold">Carregando desafios...</div>;
 
     const currentQ = questions[currentIndex];
+    const isAnswered = currentQ.already_answered || answeredQuestionIds.has(currentQ.id);
 
     return (
         <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center" translate="no">

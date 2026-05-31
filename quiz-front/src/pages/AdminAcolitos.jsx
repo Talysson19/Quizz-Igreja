@@ -12,14 +12,14 @@ export default function AdminAcolitos() {
     const [editingAcolito, setEditingAcolito] = useState(null);
     const [newName, setNewName] = useState(''); 
     const [newEmail, setNewEmail] = useState('');
-    const [newPassword, setNewPassword] = useState('Senha123');
+    const [newPassword] = useState('Senha123');
 
     async function fetchAcolitos() {
         try {
             const response = await api.get('/admin/dashboard'); 
             setAcolitos(response.data.data || []); 
         } catch (err) {
-            console.error("Erro ao carregar lista.");
+            console.error("Erro ao carregar lista.", err);
         } finally {
             setLoading(false);
         }
@@ -61,7 +61,7 @@ export default function AdminAcolitos() {
             await api.delete(`/admin/acolytes/${id}`);
             alert("Acólito removido!");
             fetchAcolitos();
-        } catch (err) {
+        } catch {
             alert("Erro ao excluir.");
         }
     }
@@ -121,6 +121,9 @@ export default function AdminAcolitos() {
                 )}
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    {loading ? (
+                        <p className="p-6 text-gray-400 italic">Carregando acólitos...</p>
+                    ) : (
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
@@ -167,6 +170,7 @@ export default function AdminAcolitos() {
                             ))}
                         </tbody>
                     </table>
+                    )}
                 </div>
             </div>
         </div>

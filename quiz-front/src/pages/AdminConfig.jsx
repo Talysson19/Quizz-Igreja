@@ -8,10 +8,22 @@ export default function AdminConfig() {
     const [displayName, setDisplayName] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [certificateEnabled, setCertificateEnabled] = useState(false);
+    const [savingCertificate, setSavingCertificate] = useState(false);
 
     useEffect(() => {
         loadManuals();
+        loadCertificateStatus();
     }, []);
+
+    async function loadCertificateStatus() {
+        try {
+            const response = await api.get('/admin/dashboard');
+            setCertificateEnabled(Boolean(response.data.certificate_enabled));
+        } catch (err) {
+            console.error("Erro ao carregar status do certificado", err);
+        }
+    }
 
     async function loadManuals() {
         try {
@@ -38,7 +50,7 @@ export default function AdminConfig() {
             setDisplayName('');
             setSelectedFile(null);
             loadManuals();
-        } catch (err) {
+        } catch {
             alert("Erro ao subir manual.");
         }
     }
@@ -48,8 +60,26 @@ export default function AdminConfig() {
         try {
             await api.delete(`/manuals/${id}`);
             setManuals(manuals.filter(m => m.id !== id));
-        } catch (err) {
+        } catch {
             alert("Erro ao excluir.");
+        }
+    }
+
+    async function handleToggleCertificate() {
+        const nextValue = !certificateEnabled;
+        setCertificateEnabled(nextValue);
+        setSavingCertificate(true);
+
+        try {
+            const response = await api.put('/admin/church/toggle-certificate', {
+                certificate_enabled: nextValue,
+            });
+            setCertificateEnabled(Boolean(response.data.certificate_enabled));
+        } catch {
+            setCertificateEnabled(!nextValue);
+            alert("Erro ao atualizar a liberação do certificado.");
+        } finally {
+            setSavingCertificate(false);
         }
     }
 
@@ -70,6 +100,35 @@ export default function AdminConfig() {
                 <h1 className="text-3xl font-black text-slate-800">Configurações da Paróquia</h1>
                 <p className="text-gray-500">Gerencie a biblioteca de manuais para os acólitos.</p>
             </header>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm mb-8 border border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 className="font-bold text-gray-700 text-lg">Liberação de Certificados</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Controle se os acólitos que concluíram a formação podem baixar o certificado.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={certificateEnabled}
+                    disabled={savingCertificate}
+                    onClick={handleToggleCertificate}
+                    className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
+                        certificateEnabled ? 'bg-green-500' : 'bg-gray-300'
+                    }`}
+                >
+                    <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                            certificateEnabled ? 'translate-x-7' : 'translate-x-1'
+                        }`}
+                    />
+                    <span className="sr-only">
+                        {certificateEnabled ? 'Bloquear certificados' : 'Liberar certificados'}
+                    </span>
+                </button>
+            </div>
 
             <div className="bg-white p-6 rounded-2xl shadow-sm mb-8 border border-gray-100">
                 <h2 className="font-bold text-gray-700 mb-4 text-lg">Adicionar Novo Manual</h2>

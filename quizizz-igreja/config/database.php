@@ -60,8 +60,8 @@ return [
     'engine' => null,
     'options' => [
         // Forçamos o modo SSL, mas dizemos para NÃO verificar o certificado
-        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
-        PDO::MYSQL_ATTR_SSL_CA => null,
+        (PHP_VERSION_ID >= 80500 ? Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT : PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT) => false,
+        (PHP_VERSION_ID >= 80500 ? Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => null,
         // Ao NÃO passar o ATTR_SSL_CA, evitamos que o OpenSSL tente validar o arquivo
     ],
 ],

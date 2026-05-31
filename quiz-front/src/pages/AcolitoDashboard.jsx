@@ -11,6 +11,7 @@ export default function AcolitoDashboard() {
         total_points: 0,
         total_questions_church: 0, 
         total_answered_user: 0,    
+        certificate_enabled: false,
         levels_progress: []        
     });
 
@@ -24,6 +25,7 @@ export default function AcolitoDashboard() {
                 total_points: response.data.total_points,
                 total_questions_church: response.data.total_questions_church,
                 total_answered_user: response.data.total_answered_user,
+                certificate_enabled: Boolean(response.data.certificate_enabled),
                 levels_progress: response.data.levels_progress
             });
         } catch (err) {
@@ -51,13 +53,16 @@ export default function AcolitoDashboard() {
             link.click();
             link.remove();
         } catch (err) {
-            alert("Erro: Você precisa concluir todas as perguntas de todos os níveis primeiro!");
+            alert(err.response?.status === 403
+                ? "O certificado ainda não foi liberado pela coordenação da sua igreja."
+                : "Erro: Você precisa concluir todas as perguntas de todos os níveis primeiro!"
+            );
         }
     }
 
-    // Regra do Certificado: Concluiu TUDO o que a igreja disponibilizou
-    const isCertificateReleased = stats.total_questions_church > 0 && 
-                                 stats.total_answered_user >= stats.total_questions_church;
+    const hasCompletedAllQuestions = stats.total_questions_church > 0 &&
+                                     stats.total_answered_user >= stats.total_questions_church;
+    const isCertificateReleased = hasCompletedAllQuestions && stats.certificate_enabled;
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans" translate="no">
@@ -104,7 +109,10 @@ export default function AcolitoDashboard() {
                         <div className="bg-gray-100 p-6 rounded-3xl border border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 opacity-70">
                             <span className="text-xl">🔒</span>
                             <span className="text-[10px] font-bold uppercase mt-1">
-                                {stats.total_answered_user}/{stats.total_questions_church} Concluídas
+                                {hasCompletedAllQuestions
+                                    ? 'Bloqueado pela coordenação'
+                                    : `${stats.total_answered_user}/${stats.total_questions_church} Concluídas`
+                                }
                             </span>
                         </div>
                     )}
