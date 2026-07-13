@@ -2,13 +2,13 @@ FROM php:8.4-apache
 
 # Instalação de dependências do sistema
 RUN apt-get update && apt-get install -y \
-    libpng-dev libonig-dev libxml2-dev libzip-dev libicu-dev zip unzip git curl
+    libpng-dev libonig-dev libxml2-dev libzip-dev libicu-dev libpq-dev zip unzip git curl
 
 # Limpeza para reduzir o tamanho da imagem
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Extensões PHP
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
+RUN docker-php-ext-install pdo_mysql pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip intl
 
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
