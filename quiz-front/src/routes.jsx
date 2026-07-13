@@ -3,7 +3,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAcolitos from './pages/AdminAcolitos';
 import ChangePassword from './pages/ChangePassword';
-import RegisterChurch from './pages/RegisterChurch';
+import SuperDashboard from './pages/SuperDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminPerguntas from './pages/AdminPerguntas';
 import AdminConfig from './pages/AdminConfig';
@@ -12,7 +12,6 @@ import AcolitoQuiz from './pages/AcolitoQuiz';
 import AcolitoRanking from './pages/AcolitoRanking';
 import AdminRanking from './pages/AdminRanking';
 import AdminDetalhamentoAcolito from './pages/AdminDetalhamentoAcolito'; // ADICIONADO
-import AcolitoManuais from './pages/AcolitoManuais';
 
 export default function AppRoutes() {
     return (
@@ -20,13 +19,13 @@ export default function AppRoutes() {
             <Routes>
                 {/* Rotas Públicas */}
                 <Route path="/" element={<Login />} />
-                <Route path="/register-church" element={<RegisterChurch />} />
+
                 
                 {/* Rota de Troca de Senha (Protegida) */}
                 <Route 
                     path="/change-password" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['admin', 'acolyte']}>
                             <ChangePassword />
                         </ProtectedRoute>
                     } 
@@ -36,7 +35,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/admin/dashboard" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['admin']}>
                             <AdminDashboard />
                         </ProtectedRoute>
                     } 
@@ -44,7 +43,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/admin/acolitos" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['admin']}>
                             <AdminAcolitos />
                         </ProtectedRoute>
                     } 
@@ -53,7 +52,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/admin/acolitos/:id/progress" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['admin']}>
                             <AdminDetalhamentoAcolito />
                         </ProtectedRoute>
                     } 
@@ -61,7 +60,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/admin/perguntas" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['admin']}>
                             <AdminPerguntas />
                         </ProtectedRoute>
                     } 
@@ -69,7 +68,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/admin/config" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['admin']}>
                             <AdminConfig />
                         </ProtectedRoute>
                     } 
@@ -77,8 +76,18 @@ export default function AppRoutes() {
                 <Route 
                     path="/admin/ranking" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['admin']}>
                              <AdminRanking />
+                        </ProtectedRoute>
+                    } 
+                />
+
+                {/* Rotas do Administrador Geral (Protegidas) */}
+                <Route 
+                    path="/super/dashboard" 
+                    element={
+                        <ProtectedRoute allowedRoles={['super_admin']}>
+                            <SuperDashboard />
                         </ProtectedRoute>
                     } 
                 />
@@ -87,7 +96,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/acolito/dashboard" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['acolyte']}>
                             <AcolitoDashboard />
                         </ProtectedRoute>
                     } 
@@ -95,7 +104,7 @@ export default function AppRoutes() {
                 <Route 
                     path="/acolito/quiz/:level" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['acolyte']}>
                             <AcolitoQuiz />
                         </ProtectedRoute>
                     } 
@@ -103,20 +112,13 @@ export default function AppRoutes() {
                 <Route 
                     path="/acolito/ranking" 
                     element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['acolyte']}>
                             <AcolitoRanking />
                         </ProtectedRoute>
                     } 
                 />
 
-                <Route
-                    path="/acolito/manuais"
-                    element={
-                        <ProtectedRoute>
-                            <AcolitoManuais />
-                        </ProtectedRoute>
-                    }
-                />
+
 
                 {/* Fallback para evitar 404 - Sempre no final */}
                 <Route path="*" element={<Navigate to="/" />} />

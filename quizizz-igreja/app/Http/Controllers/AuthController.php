@@ -27,10 +27,29 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Ofensiva Diária (Streak Logic)
+        if ($user->role === 'acolyte') {
+            $now = now();
+            if ($user->last_login_at) {
+                $lastLogin = \Carbon\Carbon::parse($user->last_login_at);
+                if ($lastLogin->isYesterday()) {
+                    $user->increment('streak_count');
+                } elseif (!$lastLogin->isToday()) {
+                    $user->streak_count = 1;
+                }
+            } else {
+                $user->streak_count = 1;
+            }
+            $user->last_login_at = $now;
+            $user->save();
+        }
+
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
+            'name' => $user->name,
             'role' => $user->role,
+            'streak_count' => $user->streak_count,
             'must_change_password' => (bool) $user->must_change_password,
             'message' => $user->must_change_password ? 'Troca de senha obrigatória!' : 'Bem-vindo!'
         ]);
@@ -73,7 +92,13 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Igreja e Administrador cadastrados com sucesso!',
                 'access_token' => $token,
-                'church' => $church->name
+                'church' => $church->name,
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'must_change_password' => (bool) $user->must_change_password
+                ]
             ], 201);
         });
     }
@@ -111,13 +136,11 @@ class AuthController extends Controller
 
         $church = Church::findOrFail($admin->church_id);
 
-        $data = $request->validate([
-            'certificate_enabled' => 'nullable|boolean',
-        ]);
-
-        $church->certificate_enabled = array_key_exists('certificate_enabled', $data)
-            ? (bool) $data['certificate_enabled']
-            : ! $church->certificate_enabled;
+        if ($request->has('certificate_enabled')) {
+            $church->certificate_enabled = filter_var($request->input('certificate_enabled'), FILTER_VALIDATE_BOOLEAN);
+        } else {
+            $church->certificate_enabled = !$church->certificate_enabled;
+        }
 
         $church->save();
 
@@ -216,7 +239,7 @@ class AuthController extends Controller
                        ->firstOrFail();
 
         $acolyte->update([
-            'password' => Hash::make('mudar123'),
+            'password' => Hash::make('Senha123'),
             'must_change_password' => true
         ]);
 
@@ -235,5 +258,134 @@ class AuthController extends Controller
         ]);
 
         return response()->json(['message' => 'Senha atualizada com sucesso!']);
+    }
+
+    // --- MÉTODOS DO SUPER ADMIN (ADMINISTRADOR GERAL) ---
+
+    public function listChurchesForSuper(Request $request)
+    {
+        if ($request->user()->role !== 'super_admin') {
+            return response()->json(['error' => 'Acesso negado.'], 403);
+        }
+
+        $churches = Church::all()->map(function ($church) {
+            // Pegamos o coordenador admin associado a essa igreja
+            $coordinator = User::where('church_id', $church->id)
+                               ->where('role', 'admin')
+                               ->first();
+
+            $totalAcolytes = User::where('church_id', $church->id)
+                                 ->where('role', 'acolyte')
+                                 ->count();
+
+            return [
+                'id' => $church->id,
+                'name' => $church->name,
+                'coordinator_name' => $coordinator ? $coordinator->name : 'Nenhum',
+                'coordinator_email' => $coordinator ? $coordinator->email : 'Nenhum',
+                'coordinator_id' => $coordinator ? $coordinator->id : null,
+                'total_acolytes' => $totalAcolytes
+            ];
+        });
+
+        return response()->json($churches);
+    }
+
+    public function registerChurchBySuper(Request $request)
+    {
+        if ($request->user()->role !== 'super_admin') {
+            return response()->json(['error' => 'Acesso negado.'], 403);
+        }
+
+        $request->validate([
+            'church_name' => 'required|string|max:255',
+            'coordinator_name' => 'required|string|max:255',
+            'coordinator_email' => 'required|string|email|unique:users,email',
+        ]);
+
+        return DB::transaction(function () use ($request) {
+            $church = Church::create([
+                'name' => $request->church_name,
+                'responsible_name' => $request->coordinator_name,
+                'certificate_enabled' => true
+            ]);
+
+            $user = User::create([
+                'name' => $request->coordinator_name,
+                'email' => $request->coordinator_email,
+                'password' => Hash::make('Senha123'), // Senha padrão
+                'church_id' => $church->id,
+                'role' => 'admin',
+                'must_change_password' => true // Obrigatório trocar de senha
+            ]);
+
+            return response()->json([
+                'message' => 'Igreja e Coordenador cadastrados com sucesso!',
+                'church' => $church,
+                'coordinator' => $user
+            ], 201);
+        });
+    }
+
+    public function listChurchAcolytesForSuper(Request $request, $id)
+    {
+        if ($request->user()->role !== 'super_admin') {
+            return response()->json(['error' => 'Acesso negado.'], 403);
+        }
+
+        $acolytes = User::where('church_id', $id)
+                        ->where('role', 'acolyte')
+                        ->select('id', 'name', 'email', 'points')
+                        ->get();
+
+        return response()->json($acolytes);
+    }
+
+    public function deleteUserBySuper(Request $request, $id)
+    {
+        if ($request->user()->role !== 'super_admin') {
+            return response()->json(['error' => 'Acesso negado.'], 403);
+        }
+
+        $user = User::findOrFail($id);
+
+        if ($user->id === $request->user()->id) {
+            return response()->json(['error' => 'Você não pode excluir a si mesmo.'], 400);
+        }
+
+        $user->delete();
+        return response()->json(['message' => 'Usuário excluído com sucesso!']);
+    }
+
+    public function deleteChurchBySuper(Request $request, $id)
+    {
+        if ($request->user()->role !== 'super_admin') {
+            return response()->json(['error' => 'Acesso negado.'], 403);
+        }
+
+        $church = Church::findOrFail($id);
+        $church->delete();
+
+        return response()->json(['message' => 'Igreja e todos os seus vínculos excluídos com sucesso!']);
+    }
+
+    public function resetCoordinatorPasswordBySuper(Request $request)
+    {
+        if ($request->user()->role !== 'super_admin') {
+            return response()->json(['error' => 'Acesso negado.'], 403);
+        }
+
+        $request->validate(['coordinator_id' => 'required|exists:users,id']);
+
+        $coordinator = User::where('id', $request->coordinator_id)
+                           ->where('role', 'admin')
+                           ->firstOrFail();
+
+        $coordinator->update([
+            'password' => Hash::make('Senha123'),
+            'must_change_password' => true
+        ]);
+
+        return response()->json(['message' => "Senha de {$coordinator->name} resetada para: Senha123"]);
     }
 }

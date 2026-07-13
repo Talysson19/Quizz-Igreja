@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import logoImg from '../logo-igreja.png';
+import Footer from '../components/Footer';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -16,7 +18,7 @@ export default function AdminDashboard() {
     useEffect(() => {
         async function loadDashboardData() {
             try {
-                const response = await api.get('/admin/dashboard');
+                const response = await api.get(`/admin/dashboard?t=${Date.now()}`);
                 // De acordo com o seu Controller: { church_name, total_acolytes, data }
                 setStats({
                     church_name: response.data.church_name,
@@ -35,17 +37,20 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 text-slate-900 font-sans" translate="no">
+        <div className="min-h-screen bg-gray-50 text-slate-900 font-sans flex flex-col" translate="no">
             {/* Header ADM */}
             <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
-                <div className="flex flex-col">
-                    <h1 className="text-xl font-bold text-purple-700">Quizizz Igreja</h1>
-                    <span className="text-xs text-gray-500 font-medium uppercase tracking-widest">Painel Administrativo</span>
+                <div className="flex items-center gap-3">
+                    <img src={logoImg} alt="Logo" className="w-8 h-8 object-contain" />
+                    <div className="flex flex-col">
+                        <h1 className="text-xl font-bold text-slate-800 uppercase tracking-tighter leading-none">Servir</h1>
+                        <span className="text-[10px] text-gray-500 font-medium uppercase tracking-widest mt-0.5">Painel Administrativo</span>
+                    </div>
                 </div>
                 <div className="flex items-center gap-6">
                     <div className="text-right hidden sm:block">
                         <p className="text-sm font-bold text-slate-700">{user?.email}</p>
-                        <p className="text-xs text-purple-600 font-semibold italic">{stats.church_name}</p>
+                        <p className="text-xs text-slate-700 font-semibold italic">{stats.church_name}</p>
                     </div>
                     <button onClick={handleLogout} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-100 transition-all">
                         Sair
@@ -56,7 +61,9 @@ export default function AdminDashboard() {
             <main className="max-w-6xl mx-auto p-6">
                 <header className="mb-8">
                     <h2 className="text-2xl font-bold text-slate-800">Painel do Coordenador</h2>
-                    <p className="text-gray-500">Gerencie a **{stats.church_name}** e acompanhe os seus **{stats.total_acolytes}** acólitos.</p>
+                    <p className="text-gray-500">
+                        Gerencie a <strong className="font-bold text-slate-700">{stats.church_name}</strong> e acompanhe os seus <strong className="font-bold text-slate-700">{stats.total_acolytes}</strong> acólitos.
+                    </p>
                 </header>
 
                 {/* Grid de Ações do ADM - Ajustado para 4 colunas em telas grandes */}
@@ -65,7 +72,7 @@ export default function AdminDashboard() {
                     {/* Card: Gestão de Acólitos */}
                     <div 
                         onClick={() => navigate('/admin/acolitos')}
-                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-purple-500 hover:shadow-md transition-all cursor-pointer group"
+                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-slate-500 hover:shadow-md transition-all cursor-pointer group"
                     >
                         <div className="bg-blue-100 text-blue-700 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -82,7 +89,7 @@ export default function AdminDashboard() {
                     {/* Card: Banco de Perguntas */}
                     <div 
                         onClick={() => navigate('/admin/perguntas')}
-                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-purple-500 hover:shadow-md transition-all cursor-pointer group"
+                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-slate-500 hover:shadow-md transition-all cursor-pointer group"
                     >
                         <div className="bg-green-100 text-green-700 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,7 +103,7 @@ export default function AdminDashboard() {
                     {/* NOVO CARD: Ranking da Igreja */}
                     <div 
                         onClick={() => navigate('/admin/ranking')}
-                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-purple-500 hover:shadow-md transition-all cursor-pointer group"
+                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-slate-500 hover:shadow-md transition-all cursor-pointer group"
                     >
                         <div className="bg-amber-100 text-amber-700 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,7 +117,7 @@ export default function AdminDashboard() {
                     {/* Card: Configurar Paróquia / Manual */}
                     <div 
                         onClick={() => navigate('/admin/config')}
-                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-purple-500 hover:shadow-md transition-all cursor-pointer group"
+                        className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-slate-500 hover:shadow-md transition-all cursor-pointer group"
                     >
                         <div className="bg-gray-100 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -121,8 +128,8 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-500 mt-2">Suba o manual em PDF e altere dados da paróquia.</p>
                     </div>
 
-                </div>
             </main>
+            <Footer />
         </div>
     );
 }

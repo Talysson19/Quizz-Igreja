@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import Footer from '../components/Footer';
 
 export default function ChangePassword() {
     const navigate = useNavigate();
@@ -32,7 +33,13 @@ export default function ChangePassword() {
             user.must_change_password = false;
             localStorage.setItem('@QuizIgreja:user', JSON.stringify(user));
 
-            navigate('/dashboard');
+            if (user?.role === 'admin') {
+                navigate('/admin/dashboard');
+            } else if (user?.role === 'super_admin') {
+                navigate('/super/dashboard');
+            } else {
+                navigate('/acolito/dashboard');
+            }
         } catch {
             alert("Erro ao atualizar senha. Tente novamente.");
         } finally {
@@ -42,8 +49,9 @@ export default function ChangePassword() {
 
    // Substitua o seu return por este exatamente:
 return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" translate="no">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-10 border border-purple-100">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-between items-center" translate="no">
+        <div className="flex-1 flex items-center justify-center p-4 w-full">
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-10 border border-slate-200">
             <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-slate-800">Segurança da Conta</h1>
                 <p className="text-gray-500 mt-2 text-sm">Este é seu primeiro acesso. Por favor, defina uma senha definitiva.</p>
@@ -54,7 +62,7 @@ return (
                     <label className="block text-sm font-semibold text-gray-700">Nova Senha</label>
                     <input 
                         type="password" 
-                        className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-purple-500 outline-none"
+                        className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-slate-500 outline-none"
                         placeholder="••••••••"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
@@ -65,7 +73,7 @@ return (
                     <label className="block text-sm font-semibold text-gray-700">Confirmar Nova Senha</label>
                     <input 
                         type="password" 
-                        className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-purple-500 outline-none"
+                        className="w-full mt-2 px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-slate-500 outline-none"
                         placeholder="••••••••"
                         value={passwordConfirmation}
                         onChange={e => setPasswordConfirmation(e.target.value)}
@@ -76,12 +84,14 @@ return (
                 <button 
                     type="submit" 
                     disabled={loading}
-                    className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl hover:bg-purple-700 transition-all shadow-lg disabled:bg-gray-400 active:scale-95 text-base"
+                    className="w-full bg-slate-700 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg disabled:bg-gray-400 active:scale-95 text-base"
                 >
                     {loading ? 'Salvando...' : 'Definir Senha e Entrar'}
                 </button>
             </form>
+            </div>
         </div>
+        <Footer />
     </div>
 );
 }

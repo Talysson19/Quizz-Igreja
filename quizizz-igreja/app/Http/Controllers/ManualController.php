@@ -35,7 +35,8 @@ class ManualController extends Controller
 
         $request->validate([
             'manual' => 'required|mimes:pdf|max:10000',
-            'display_name' => 'required|string|max:255'
+            'display_name' => 'required|string|max:255',
+            'level' => 'required|integer'
         ]);
 
         if ($request->hasFile('manual')) {
@@ -45,7 +46,8 @@ class ManualController extends Controller
             $manual = Manual::create([
                 'church_id' => $user->church_id,
                 'display_name' => $request->display_name,
-                'file_path' => $path
+                'file_path' => $path,
+                'level' => (int) $request->level
             ]);
 
             return response()->json($manual, 201);
@@ -90,6 +92,10 @@ class ManualController extends Controller
 
     if (!file_exists($path)) {
         return response()->json(['error' => 'Arquivo não encontrado'], 404);
+    }
+
+    if ($user->role === 'acolyte') {
+        $user->update(['has_downloaded_manual' => true]);
     }
 
     return response()->download($path);

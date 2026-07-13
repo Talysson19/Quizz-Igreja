@@ -86,6 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/dashboard', [AuthController::class, 'adminDashboard']);
     Route::get('/admin/acolytes', [AuthController::class, 'listAcolytes']);
     Route::post('/admin/acolytes', [AuthController::class, 'registerAcolyte']);
+    Route::get('/admin/acolytes/{id}/progress', [QuestionController::class, 'getAcolyteProgressForAdmin']);
     Route::put('/admin/acolytes/{id}', [AuthController::class, 'updateAcolyte']);
     Route::delete('/admin/acolytes/{id}', [AuthController::class, 'deleteAcolyte']);
     Route::post('/admin/reset-acolyte-password', [AuthController::class, 'resetAcolytePassword']);
@@ -98,4 +99,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Configurações
     Route::post('/user/change-password', [AuthController::class, 'changePassword']);
+
+    // Super Admin Routes
+    Route::get('/super/churches', [AuthController::class, 'listChurchesForSuper']);
+    Route::post('/super/churches', [AuthController::class, 'registerChurchBySuper']);
+    Route::get('/super/churches/{id}/acolytes', [AuthController::class, 'listChurchAcolytesForSuper']);
+    Route::delete('/super/users/{id}', [AuthController::class, 'deleteUserBySuper']);
+    Route::delete('/super/churches/{id}', [AuthController::class, 'deleteChurchBySuper']);
+    Route::post('/super/reset-coordinator-password', [AuthController::class, 'resetCoordinatorPasswordBySuper']);
 });

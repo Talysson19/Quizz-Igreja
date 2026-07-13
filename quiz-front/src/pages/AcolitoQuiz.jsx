@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import Footer from '../components/Footer';
 
 export default function AcolitoQuiz() {
     const { level } = useParams();
@@ -57,13 +58,14 @@ export default function AcolitoQuiz() {
     const isAnswered = currentQ.already_answered || answeredQuestionIds.has(currentQ.id);
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center" translate="no">
-            <div className="max-w-2xl w-full">
+        <div className="min-h-screen bg-slate-50 flex flex-col justify-between items-center" translate="no">
+            <div className="flex-1 flex items-center justify-center p-6 w-full">
+                <div className="max-w-2xl w-full">
                 
                 {/* BOTÃO VOLTAR */}
                 <button 
                     onClick={() => navigate('/acolito/dashboard')} 
-                    className="mb-6 text-gray-400 hover:text-purple-600 font-bold flex items-center gap-2 transition-colors group"
+                    className="mb-6 text-gray-400 hover:text-slate-700 font-bold flex items-center gap-2 transition-colors group"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -73,7 +75,7 @@ export default function AcolitoQuiz() {
 
                 <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
                     <header className="flex justify-between items-center mb-6">
-                        <span className="text-[10px] font-black text-purple-600 uppercase tracking-widest">
+                        <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">
                             Questão {currentIndex + 1} de {questions.length}
                         </span>
                         
@@ -105,9 +107,9 @@ export default function AcolitoQuiz() {
                                 <button 
                                     key={opt} 
                                     onClick={() => handleAnswer(opt)} 
-                                    className="w-full text-left p-5 rounded-2xl border-2 border-gray-100 hover:border-purple-500 hover:bg-purple-50 transition-all font-semibold text-slate-700"
+                                    className="w-full text-left p-5 rounded-2xl border-2 border-gray-100 hover:border-slate-500 hover:bg-slate-50 transition-all font-semibold text-slate-700"
                                 >
-                                    <span className="text-purple-300 mr-3 uppercase">{opt})</span> 
+                                    <span className="text-slate-400 mr-3 uppercase">{opt})</span> 
                                     {currentQ[`option_${opt}`]}
                                 </button>
                             ))}
@@ -125,7 +127,7 @@ export default function AcolitoQuiz() {
                                 </>
                             ) : (
                                 <div className="mb-4">
-                                    <span className="text-[10px] font-black bg-purple-100 text-purple-600 px-3 py-1 rounded-full uppercase">Concluído</span>
+                                    <span className="text-[10px] font-black bg-slate-100 text-slate-700 px-3 py-1 rounded-full uppercase">Concluído</span>
                                     <p className="text-slate-500 text-sm mt-3 font-medium">Você já respondeu este desafio anteriormente.</p>
                                 </div>
                             )}
@@ -144,7 +146,7 @@ export default function AcolitoQuiz() {
                                         navigate('/acolito/dashboard');
                                     }
                                 }}
-                                className="bg-purple-600 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all active:scale-95"
+                                className="bg-slate-700 text-white px-8 py-4 rounded-2xl font-bold w-full hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all active:scale-95"
                             >
                                 {currentIndex + 1 < questions.length ? 'Ir para a Próxima' : 'Finalizar Nível'}
                             </button>
@@ -153,5 +155,7 @@ export default function AcolitoQuiz() {
                 </div>
             </div>
         </div>
-    );
+        <Footer />
+    </div>
+);
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import Footer from '../components/Footer';
 
 export default function AdminAcolitos() {
     const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function AdminAcolitos() {
 
     async function fetchAcolitos() {
         try {
-            const response = await api.get('/admin/dashboard'); 
+            const response = await api.get(`/admin/dashboard?t=${Date.now()}`);
             setAcolitos(response.data.data || []); 
         } catch (err) {
             console.error("Erro ao carregar lista.", err);
@@ -66,6 +67,20 @@ export default function AdminAcolitos() {
         }
     }
 
+    async function handleResetPassword(id) {
+        if (!window.confirm("Tem certeza que deseja resetar a senha deste acólito para a padrão (Senha123)?")) return;
+        try {
+            const response = await api.post('/admin/reset-acolyte-password', {
+                acolyte_id: id
+            });
+            alert(response.data.message || "Senha resetada com sucesso!");
+            fetchAcolitos();
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao resetar senha.");
+        }
+    }
+
     function handleEdit(user) {
         setEditingAcolito(user);
         setNewName(user.name);
@@ -83,11 +98,11 @@ export default function AdminAcolitos() {
     useEffect(() => { fetchAcolitos(); }, []);
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8" translate="no">
-            <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-gray-50 flex flex-col" translate="no">
+            <div className="max-w-6xl w-full mx-auto p-8 flex-grow">
                 <button 
                     onClick={() => navigate('/admin/dashboard')}
-                    className="flex items-center gap-2 text-gray-500 hover:text-purple-600 transition-all mb-6 group"
+                    className="flex items-center gap-2 text-gray-500 hover:text-slate-700 transition-all mb-6 group"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -99,21 +114,21 @@ export default function AdminAcolitos() {
                     <h1 className="text-2xl font-bold text-slate-800">Gestão de Acólitos</h1>
                     <button 
                         onClick={() => { showForm ? resetForm() : setShowForm(true) }} 
-                        className={`${showForm ? 'bg-gray-400' : 'bg-purple-600'} text-white px-6 py-2 rounded-lg font-bold transition-colors`}
+                        className={`${showForm ? 'bg-gray-400' : 'bg-slate-700'} text-white px-6 py-2 rounded-lg font-bold transition-colors`}
                     >
                         {showForm ? 'Cancelar' : '+ Novo Acólito'}
                     </button>
                 </header>
 
                 {showForm && (
-                    <div className="bg-white p-6 rounded-2xl shadow-md mb-8 border-2 border-purple-100">
-                        <h2 className="text-sm font-bold text-purple-600 uppercase mb-4">
+                    <div className="bg-white p-6 rounded-2xl shadow-md mb-8 border-2 border-slate-200">
+                        <h2 className="text-sm font-bold text-slate-700 uppercase mb-4">
                             {editingAcolito ? 'Editar Acólito' : 'Novo Cadastro'}
                         </h2>
                         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <input type="text" placeholder="Nome" className="border p-2 rounded" value={newName} onChange={e => setNewName(e.target.value)} required />
                             <input type="email" placeholder="E-mail" className="border p-2 rounded" value={newEmail} onChange={e => setNewEmail(e.target.value)} required />
-                            <button className="bg-purple-600 text-white rounded font-bold hover:bg-purple-700 transition-colors">
+                            <button className="bg-slate-700 text-white rounded font-bold hover:bg-slate-800 transition-colors">
                                 {editingAcolito ? 'Salvar Alterações' : 'Cadastrar'}
                             </button>
                         </form>
@@ -142,7 +157,7 @@ export default function AdminAcolitos() {
                                     </td>
                                     <td className="px-6 py-4">
                                         {user.must_change_password ? (
-                                            <code className="bg-purple-50 text-purple-600 px-2 py-1 rounded font-bold text-xs">Senha123</code>
+                                            <code className="bg-slate-50 text-slate-700 px-2 py-1 rounded font-bold text-xs">Senha123</code>
                                         ) : (
                                             <span className="text-gray-300 text-xs italic">Alterada</span>
                                         )}
@@ -153,6 +168,18 @@ export default function AdminAcolitos() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right space-x-3">
+                                        <button 
+                                            onClick={() => navigate(`/admin/acolitos/${user.id}/progress`)}
+                                            className="text-slate-700 hover:text-slate-900 font-bold text-xs uppercase"
+                                        >
+                                            Progresso
+                                        </button>
+                                        <button 
+                                            onClick={() => handleResetPassword(user.id)}
+                                            className="text-amber-600 hover:text-amber-700 font-bold text-xs uppercase"
+                                        >
+                                            Resetar Senha
+                                        </button>
                                         <button 
                                             onClick={() => handleEdit(user)}
                                             className="text-blue-500 hover:text-blue-700 font-bold text-xs uppercase"
@@ -171,8 +198,8 @@ export default function AdminAcolitos() {
                         </tbody>
                     </table>
                     )}
-                </div>
             </div>
+            <Footer />
         </div>
     );
 }

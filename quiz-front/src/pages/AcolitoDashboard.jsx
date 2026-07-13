@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import logoImg from '../logo-igreja.png';
+import Footer from '../components/Footer';
 
 export default function AcolitoDashboard() {
     const navigate = useNavigate();
@@ -12,21 +14,27 @@ export default function AcolitoDashboard() {
         total_questions_church: 0, 
         total_answered_user: 0,    
         certificate_enabled: false,
-        levels_progress: []        
+        levels_progress: [],
+        streak_count: 0,
+        rank_title: 'Aspirante',
+        medals: []
     });
 
     const [loading, setLoading] = useState(true);
 
     async function loadAcolitoData() {
         try {
-            const response = await api.get('/user/progress');
+            const response = await api.get(`/user/progress?t=${Date.now()}`);
             setStats({
                 user_name: response.data.user_name,
                 total_points: response.data.total_points,
                 total_questions_church: response.data.total_questions_church,
                 total_answered_user: response.data.total_answered_user,
                 certificate_enabled: Boolean(response.data.certificate_enabled),
-                levels_progress: response.data.levels_progress
+                levels_progress: response.data.levels_progress,
+                streak_count: response.data.streak_count || 0,
+                rank_title: response.data.rank_title || 'Aspirante',
+                medals: response.data.medals || []
             });
         } catch (err) {
             console.error("Erro ao carregar progresso:", err);
@@ -60,37 +68,62 @@ export default function AcolitoDashboard() {
         }
     }
 
+    async function handleDownloadManual(manualId, manualName, e) {
+        e.stopPropagation();
+        try {
+            const response = await api.get(`/manuals/${manualId}/download`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', manualName.endsWith('.pdf') ? manualName : `${manualName}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            loadAcolitoData();
+        } catch (err) {
+            console.error("Erro ao baixar manual", err);
+            alert("Não foi possível baixar o manual no momento.");
+        }
+    }
+
     const hasCompletedAllQuestions = stats.total_questions_church > 0 &&
                                      stats.total_answered_user >= stats.total_questions_church;
     const isCertificateReleased = hasCompletedAllQuestions && stats.certificate_enabled;
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans" translate="no">
+        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col" translate="no">
             <nav className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-                <div className="flex flex-col">
-                    <h1 className="text-xl font-black text-purple-700 uppercase tracking-tighter">Quizizz Igreja</h1>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Área do Acólito</span>
+                <div className="flex items-center gap-3">
+                    <img src={logoImg} alt="Logo" className="w-8 h-8 object-contain" />
+                    <div className="flex flex-col">
+                        <h1 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Servir</h1>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Quiz Litúrgico</span>
+                    </div>
                 </div>
                 <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors">Sair</button>
             </nav>
 
             <main className="max-w-5xl mx-auto p-6">
-                <header className="mb-8 text-center sm:text-left">
-                    <h2 className="text-3xl font-extrabold text-slate-800">Olá, {stats.user_name}!</h2>
-                    <p className="text-gray-500">Pronto para subir de nível no serviço do altar?</p>
+                <header className="mb-8 text-center sm:text-left flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                        <h2 className="text-3xl font-extrabold text-slate-800">Olá, {stats.user_name}!</h2>
+                        <p className="text-sm font-semibold text-slate-500 mt-1 flex items-center justify-center sm:justify-start gap-1">
+                            <span>⚜️</span> {stats.rank_title}
+                        </p>
+                    </div>
+                    {stats.streak_count > 0 && (
+                        <div className="bg-orange-50 border border-orange-200 px-4 py-2 rounded-2xl flex items-center justify-center gap-2 self-center sm:self-auto shadow-sm animate-bounce">
+                            <span className="text-xl">🔥</span>
+                            <span className="text-sm font-black text-orange-600">{stats.streak_count} Dias de Ofensiva</span>
+                        </div>
+                    )}
                 </header>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
                     {/* PONTOS */}
-                    <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 rounded-3xl shadow-lg text-white flex flex-col items-center justify-center">
+                    <div className="bg-gradient-to-br from-slate-700 to-slate-900 p-6 rounded-3xl shadow-lg text-white flex flex-col items-center justify-center">
                         <span className="text-[10px] font-bold uppercase opacity-80">Pontos</span>
                         <span className="text-4xl font-black">{stats.total_points}</span>
-                    </div>
-
-                    {/* MANUAIS */}
-                    <div onClick={() => navigate('/acolito/manuais')} className="bg-white p-6 rounded-3xl border border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-all group">
-                        <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📚</span>
-                        <span className="font-bold text-sm text-slate-700">Manuais</span>
                     </div>
 
                     {/* RANKING */}
@@ -118,6 +151,30 @@ export default function AcolitoDashboard() {
                     )}
                 </div>
 
+                {/* Quadro de Medalhas */}
+                {stats.medals && stats.medals.length > 0 && (
+                    <div className="mb-10">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4">Medalhas Desbloqueadas</h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                            {stats.medals.map(medal => (
+                                <div 
+                                    key={medal.id}
+                                    className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${
+                                        medal.unlocked 
+                                            ? 'bg-white border-amber-200 shadow-sm' 
+                                            : 'bg-slate-50 border-slate-100 opacity-50 select-none'
+                                    }`}
+                                    title={medal.description}
+                                >
+                                    <span className={`text-3xl mb-2 ${medal.unlocked ? '' : 'filter grayscale'}`}>{medal.icon}</span>
+                                    <h4 className="font-bold text-xs text-slate-700 leading-tight">{medal.title}</h4>
+                                    <span className="text-[9px] text-slate-400 mt-1">{medal.unlocked ? 'Desbloqueada' : 'Bloqueada'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="space-y-4">
                     <h3 className="text-lg font-bold text-slate-800 mb-4">Sua Jornada de Formação</h3>
                     
@@ -139,11 +196,11 @@ export default function AcolitoDashboard() {
                                         className={`bg-white p-7 rounded-3xl border-b-4 flex justify-between items-center transition-all ${
                                             isLocked 
                                             ? 'border-gray-200 opacity-60 cursor-not-allowed' 
-                                            : 'border-purple-500 shadow-sm cursor-pointer hover:-translate-y-1 active:scale-[0.98]'
+                                            : 'border-slate-500 shadow-sm cursor-pointer hover:-translate-y-1 active:scale-[0.98]'
                                         }`}
                                     >
                                         <div className="flex items-center gap-5">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl ${isLocked ? 'bg-gray-100 text-gray-400' : 'bg-purple-100 text-purple-600'}`}>
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl ${isLocked ? 'bg-gray-100 text-gray-400' : 'bg-slate-100 text-slate-700'}`}>
                                                 {lvl.level}
                                             </div>
                                             <div>
@@ -152,17 +209,27 @@ export default function AcolitoDashboard() {
                                                      lvl.level === 2 ? 'Nível 2: Mestre de Cerimônias' : 
                                                      `Nível ${lvl.level}: Formação Contínua`}
                                                 </h4>
-                                                <p className="text-sm text-gray-400">
-                                                    {isLocked 
-                                                        ? `Bloqueado. Conclua o Nível ${lvl.level - 1} para liberar.` 
-                                                        : lvl.is_completed 
-                                                            ? '✅ Nível concluído!' 
-                                                            : `${lvl.completed_questions} / ${lvl.total_questions} respondidas.`
-                                                    }
-                                                </p>
+                                                <div className="flex flex-wrap items-center gap-3 mt-1">
+                                                    <p className="text-sm text-gray-400">
+                                                        {isLocked 
+                                                            ? `Bloqueado. Conclua o Nível ${lvl.level - 1} para liberar.` 
+                                                            : lvl.is_completed 
+                                                                ? '✅ Nível concluído!' 
+                                                                : `${lvl.completed_questions} / ${lvl.total_questions} respondidas.`
+                                                        }
+                                                    </p>
+                                                    {!isLocked && lvl.manual_id && (
+                                                        <button
+                                                            onClick={(e) => handleDownloadManual(lvl.manual_id, lvl.manual_name, e)}
+                                                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-3 py-1 rounded-full transition-all border border-slate-200 flex items-center gap-1 shadow-sm"
+                                                        >
+                                                            📚 Baixar Manual de Estudo (PDF)
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className={`text-2xl font-black ${isLocked ? 'text-gray-300' : 'text-purple-500'}`}>
+                                        <div className={`text-2xl font-black ${isLocked ? 'text-gray-300' : 'text-slate-600'}`}>
                                             {isLocked ? '🔒' : '→'}
                                         </div>
                                     </div>
@@ -173,9 +240,8 @@ export default function AcolitoDashboard() {
                                 <p className="text-gray-400">Nenhuma pergunta disponível para sua paróquia ainda.</p>
                             </div>
                         )
-                    )}
-                </div>
             </main>
+            <Footer />
         </div>
     );
 }

@@ -13,7 +13,8 @@ class Manual extends Model
     protected $fillable = [
         'church_id',
         'display_name',
-        'file_path'
+        'file_path',
+        'level'
     ];
 
     public function church()

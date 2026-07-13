@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Question;
 use App\Models\User;
 use App\Models\Church;
+use App\Models\Manual;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -89,8 +90,12 @@ public function index(Request $request)
         $ranking = User::where('church_id', $user->church_id)
             ->where('role', 'acolyte')
             ->orderBy('points', 'desc')
-            ->select('name', 'points')
-            ->get();
+            ->select('id', 'name', 'points')
+            ->get()
+            ->map(function ($u) {
+                $u->rank_title = $this->getLiturgicalRank($u->points);
+                return $u;
+            });
 
         $church = Church::find($user->church_id);
 
@@ -98,6 +103,21 @@ public function index(Request $request)
             'church' => $church ? $church->name : 'Geral',
             'ranking' => $ranking
         ]);
+    }
+
+    private function getLiturgicalRank($points)
+    {
+        if ($points <= 50) {
+            return 'Aspirante';
+        } elseif ($points <= 150) {
+            return 'Acólito de Altar';
+        } elseif ($points <= 300) {
+            return 'Turiferário';
+        } elseif ($points <= 500) {
+            return 'Cerimoniário';
+        } else {
+            return 'Cerimoniário-Mor';
+        }
     }
 
     // 4. Busca Perguntas com Trava de Nível (Cenário 8)
@@ -164,23 +184,76 @@ public function index(Request $request)
             ->where('questions.level', $lvl->level)
             ->count();
 
+        $manual = Manual::where('church_id', $user->church_id)
+                        ->where('level', $lvl->level)
+                        ->first();
+
         return [
             'level' => $lvl->level,
-            'total_questions' => $totalInLevel, // Adicionado
+            'total_questions' => $totalInLevel,
             'completed_questions' => $completed,
-            'is_completed' => ($totalInLevel > 0 && $completed >= $totalInLevel) // Adicionado
+            'is_completed' => ($totalInLevel > 0 && $completed >= $totalInLevel),
+            'manual_id' => $manual ? $manual->id : null,
+            'manual_name' => $manual ? $manual->display_name : null,
         ];
     });
+
+    // 3. Informações de Gamificação
+    $totalQuestionsInChurch = Question::where('church_id', $user->church_id)->count();
+    $totalAnsweredByUser = DB::table('user_answers')
+        ->join('questions', 'user_answers.question_id', '=', 'questions.id')
+        ->where('user_answers.user_id', $user->id)
+        ->where('questions.church_id', $user->church_id)
+        ->count();
+
+    $rankTitle = $this->getLiturgicalRank($user->points);
+
+    $medals = [
+        [
+            'id' => 'streak_3',
+            'title' => 'Fogo Sagrado',
+            'description' => 'Mantenha uma ofensiva de 3 dias seguidos acessando o app.',
+            'unlocked' => ($user->streak_count >= 3),
+            'icon' => '🔥'
+        ],
+        [
+            'id' => 'download_manual',
+            'title' => 'Biblioteca Litúrgica',
+            'description' => 'Baixe o manual de orientações da sua paróquia.',
+            'unlocked' => (bool) $user->has_downloaded_manual,
+            'icon' => '📚'
+        ],
+        [
+            'id' => 'points_50',
+            'title' => 'Primeiro Degrau',
+            'description' => 'Alcance 50 pontos acumulados no sistema.',
+            'unlocked' => ($user->points >= 50),
+            'icon' => '🛡️'
+        ],
+        [
+            'id' => 'points_300',
+            'title' => 'Mestre do Templo',
+            'description' => 'Alcance 300 pontos acumulados no sistema.',
+            'unlocked' => ($user->points >= 300),
+            'icon' => '👑'
+        ],
+        [
+            'id' => 'completed_all',
+            'title' => 'Fidelidade ao Altar',
+            'description' => 'Conclua todas as perguntas cadastradas pela paróquia.',
+            'unlocked' => ($totalQuestionsInChurch > 0 && $totalAnsweredByUser >= $totalQuestionsInChurch),
+            'icon' => '✨'
+        ]
+    ];
 
     return response()->json([
         'user_name' => $user->name,
         'total_points' => $user->points,
-        'total_questions_church' => Question::where('church_id', $user->church_id)->count(),
-        'total_answered_user' => DB::table('user_answers')
-            ->join('questions', 'user_answers.question_id', '=', 'questions.id')
-            ->where('user_answers.user_id', $user->id)
-            ->where('questions.church_id', $user->church_id)
-            ->count(),
+        'streak_count' => $user->streak_count,
+        'rank_title' => $rankTitle,
+        'medals' => $medals,
+        'total_questions_church' => $totalQuestionsInChurch,
+        'total_answered_user' => $totalAnsweredByUser,
         'certificate_enabled' => (bool) (Church::find($user->church_id)?->certificate_enabled ?? false),
         'levels_progress' => $levelsProgress
     ]);
@@ -308,20 +381,96 @@ public function destroy(Request $request, $id)
 public function getAcolyteProgressForAdmin(Request $request, $id)
 {
     $admin = $request->user();
+    if ($admin->role !== 'admin') {
+        return response()->json(['error' => 'Acesso negado.'], 403);
+    }
+    
     // Garante que o admin só veja acólitos da mesma igreja
     $acolyte = User::where('id', $id)->where('church_id', $admin->church_id)->firstOrFail();
 
-    $progress = DB::table('user_answers')
+    // 1. Pegamos todos os níveis que POSSUEM perguntas
+    $allLevels = Question::where('church_id', $acolyte->church_id)
+        ->select('level')
+        ->distinct()
+        ->orderBy('level', 'asc')
+        ->get();
+
+    // 2. Calculamos o progresso real por nível
+    $levelsProgress = $allLevels->map(function($lvl) use ($acolyte) {
+        $totalInLevel = Question::where('church_id', $acolyte->church_id)
+            ->where('level', $lvl->level)
+            ->count();
+
+        $completed = DB::table('user_answers')
+            ->join('questions', 'user_answers.question_id', '=', 'questions.id')
+            ->where('user_answers.user_id', $acolyte->id)
+            ->where('questions.level', $lvl->level)
+            ->count();
+
+        return [
+            'level' => $lvl->level,
+            'total_questions' => $totalInLevel,
+            'completed_questions' => $completed,
+            'is_completed' => ($totalInLevel > 0 && $completed >= $totalInLevel)
+        ];
+    });
+
+    // 3. Informações de Gamificação
+    $totalQuestionsInChurch = Question::where('church_id', $acolyte->church_id)->count();
+    $totalAnsweredByUser = DB::table('user_answers')
         ->join('questions', 'user_answers.question_id', '=', 'questions.id')
         ->where('user_answers.user_id', $acolyte->id)
-        ->select('questions.level', DB::raw('count(*) as completed_questions'))
-        ->groupBy('questions.level')
-        ->get();
+        ->where('questions.church_id', $acolyte->church_id)
+        ->count();
+
+    $rankTitle = $this->getLiturgicalRank($acolyte->points);
+
+    $medals = [
+        [
+            'id' => 'streak_3',
+            'title' => 'Fogo Sagrado',
+            'description' => 'Mantenha uma ofensiva de 3 dias seguidos acessando o app.',
+            'unlocked' => ($acolyte->streak_count >= 3),
+            'icon' => '🔥'
+        ],
+        [
+            'id' => 'download_manual',
+            'title' => 'Biblioteca Litúrgica',
+            'description' => 'Baixe o manual de orientações da sua paróquia.',
+            'unlocked' => (bool) $acolyte->has_downloaded_manual,
+            'icon' => '📚'
+        ],
+        [
+            'id' => 'points_50',
+            'title' => 'Primeiro Degrau',
+            'description' => 'Alcance 50 pontos acumulados no sistema.',
+            'unlocked' => ($acolyte->points >= 50),
+            'icon' => '🛡️'
+        ],
+        [
+            'id' => 'points_300',
+            'title' => 'Mestre do Templo',
+            'description' => 'Alcance 300 pontos acumulados no sistema.',
+            'unlocked' => ($acolyte->points >= 300),
+            'icon' => '👑'
+        ],
+        [
+            'id' => 'completed_all',
+            'title' => 'Fidelidade ao Altar',
+            'description' => 'Conclua todas as perguntas cadastradas pela paróquia.',
+            'unlocked' => ($totalQuestionsInChurch > 0 && $totalAnsweredByUser >= $totalQuestionsInChurch),
+            'icon' => '✨'
+        ]
+    ];
 
     return response()->json([
         'user_name' => $acolyte->name,
+        'email' => $acolyte->email,
         'total_points' => $acolyte->points,
-        'levels_progress' => $progress
+        'streak_count' => $acolyte->streak_count,
+        'rank_title' => $rankTitle,
+        'medals' => $medals,
+        'levels_progress' => $levelsProgress
     ]);
 }
 }
