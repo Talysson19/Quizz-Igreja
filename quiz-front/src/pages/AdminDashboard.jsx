@@ -127,7 +127,7 @@ export default function AdminDashboard() {
                         <h3 className="text-lg font-bold text-slate-800">Manual e Igreja</h3>
                         <p className="text-sm text-gray-500 mt-2">Suba o manual em PDF e altere dados da paróquia.</p>
                     </div>
-
+                </div>
             </main>
             <Footer />
         </div>

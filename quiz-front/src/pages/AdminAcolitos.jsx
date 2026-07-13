@@ -198,6 +198,7 @@ export default function AdminAcolitos() {
                         </tbody>
                     </table>
                     )}
+                </div>
             </div>
             <Footer />
         </div>

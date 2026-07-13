@@ -240,6 +240,8 @@ export default function AcolitoDashboard() {
                                 <p className="text-gray-400">Nenhuma pergunta disponível para sua paróquia ainda.</p>
                             </div>
                         )
+                    )}
+                </div>
             </main>
             <Footer />
         </div>
