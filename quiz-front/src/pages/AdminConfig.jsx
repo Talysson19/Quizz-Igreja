@@ -12,6 +12,7 @@ export default function AdminConfig() {
     const [certificateEnabled, setCertificateEnabled] = useState(false);
     const [savingCertificate, setSavingCertificate] = useState(false);
     const [level, setLevel] = useState(1);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         loadManuals();
@@ -47,6 +48,7 @@ export default function AdminConfig() {
         formData.append('display_name', displayName);
         formData.append('level', level);
 
+        setSaving(true);
         try {
             await api.post('/manuals', formData);
             alert("Manual adicionado com sucesso!");
@@ -56,6 +58,8 @@ export default function AdminConfig() {
             loadManuals();
         } catch {
             alert("Erro ao subir manual.");
+        } finally {
+            setSaving(false);
         }
     }
 
@@ -168,8 +172,22 @@ export default function AdminConfig() {
                         onChange={e => setSelectedFile(e.target.files[0])}
                         className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-800 hover:file:bg-slate-100"
                     />
-                    <button type="submit" className="bg-slate-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-md active:scale-95">
-                        Atualizar Biblioteca
+                    <button 
+                        type="submit" 
+                        disabled={saving}
+                        className={`px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 text-white flex items-center justify-center gap-2 ${
+                            saving ? 'bg-slate-500 cursor-not-allowed opacity-80' : 'bg-slate-700 hover:bg-slate-800'
+                        }`}
+                    >
+                        {saving ? (
+                            <>
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Enviando...
+                            </>
+                        ) : 'Atualizar Biblioteca'}
                     </button>
                 </form>
             </div>

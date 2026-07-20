@@ -12,6 +12,7 @@ export default function AcolitoQuiz() {
     const [lastResult, setLastResult] = useState(null);
     const [useHint, setUseHint] = useState(false);
     const [answeredQuestionIds, setAnsweredQuestionIds] = useState(() => new Set());
+    const [submitting, setSubmitting] = useState(false);
 
     // 1. Carregar perguntas do nível
     useEffect(() => {
@@ -28,8 +29,9 @@ export default function AcolitoQuiz() {
     }, [level, navigate]);
 
     async function handleAnswer(option) {
-        if (isAnswered) return; // Trava para não responder duas vezes na mesma sessão
+        if (isAnswered || submitting) return; // Trava para não responder duas vezes na mesma sessão
         
+        setSubmitting(true);
         try {
             const response = await api.post('/questions/answer', {
                 question_id: questions[currentIndex].id,
@@ -49,6 +51,8 @@ export default function AcolitoQuiz() {
                     explanation: err.response.data.explanation 
                 });
             }
+        } finally {
+            setSubmitting(false);
         }
     }
 
@@ -106,8 +110,11 @@ export default function AcolitoQuiz() {
                             {['a', 'b', 'c', 'd'].map(opt => (
                                 <button 
                                     key={opt} 
+                                    disabled={submitting}
                                     onClick={() => handleAnswer(opt)} 
-                                    className="w-full text-left p-5 rounded-2xl border-2 border-gray-100 hover:border-slate-500 hover:bg-slate-50 transition-all font-semibold text-slate-700"
+                                    className={`w-full text-left p-5 rounded-2xl border-2 border-gray-100 transition-all font-semibold text-slate-700 ${
+                                        submitting ? 'opacity-60 cursor-not-allowed' : 'hover:border-slate-500 hover:bg-slate-50'
+                                    }`}
                                 >
                                     <span className="text-slate-400 mr-3 uppercase">{opt})</span> 
                                     {currentQ[`option_${opt}`]}

@@ -21,6 +21,7 @@ export default function AcolitoDashboard() {
     });
 
     const [loading, setLoading] = useState(true);
+    const [downloadingCertificate, setDownloadingCertificate] = useState(false);
 
     async function loadAcolitoData() {
         try {
@@ -51,6 +52,8 @@ export default function AcolitoDashboard() {
     }
 
     async function handleDownloadCertificate() {
+        if (downloadingCertificate) return;
+        setDownloadingCertificate(true);
         try {
             const response = await api.get('/user/certificate', { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -65,6 +68,8 @@ export default function AcolitoDashboard() {
                 ? "O certificado ainda não foi liberado pela coordenação da sua igreja."
                 : "Erro: Você precisa concluir todas as perguntas de todos os níveis primeiro!"
             );
+        } finally {
+            setDownloadingCertificate(false);
         }
     }
 
@@ -134,9 +139,26 @@ export default function AcolitoDashboard() {
 
                     {/* CERTIFICADO DINÂMICO */}
                     {isCertificateReleased ? (
-                        <div onClick={handleDownloadCertificate} className="bg-gradient-to-br from-amber-400 to-orange-500 p-6 rounded-3xl shadow-lg text-white flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition-all">
-                            <span className="text-2xl animate-bounce">🎓</span>
-                            <span className="font-black text-sm uppercase tracking-tighter">Certificado</span>
+                        <div 
+                            onClick={handleDownloadCertificate} 
+                            className={`bg-gradient-to-br from-amber-400 to-orange-500 p-6 rounded-3xl shadow-lg text-white flex flex-col items-center justify-center transition-all ${
+                                downloadingCertificate ? 'opacity-80 cursor-wait' : 'cursor-pointer hover:scale-105'
+                            }`}
+                        >
+                            {downloadingCertificate ? (
+                                <>
+                                    <svg className="animate-spin h-6 w-6 text-white mb-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="font-black text-sm uppercase tracking-tighter">Baixando...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-2xl animate-bounce">🎓</span>
+                                    <span className="font-black text-sm uppercase tracking-tighter">Certificado</span>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div className="bg-gray-100 p-6 rounded-3xl border border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 opacity-70">
